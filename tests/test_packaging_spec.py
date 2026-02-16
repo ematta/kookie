@@ -22,6 +22,22 @@ def test_pyinstaller_spec_contains_required_assets_and_hooks() -> None:
         assert token in contents
 
 
+def test_pyinstaller_spec_does_not_depend_on___file__() -> None:
+    spec_path = ROOT / "packaging" / "kookie.spec"
+    contents = spec_path.read_text(encoding="utf-8")
+
+    assert "__file__" not in contents
+    assert "SPECPATH" in contents
+
+
+def test_pyinstaller_spec_supports_optional_model_assets() -> None:
+    spec_path = ROOT / "packaging" / "kookie.spec"
+    contents = spec_path.read_text(encoding="utf-8")
+
+    assert "exists()" in contents
+    assert "Skipping missing asset during packaging" in contents
+
+
 def test_entitlements_include_required_hardened_runtime_exceptions() -> None:
     entitlements_path = ROOT / "packaging" / "entitlements.plist"
     with entitlements_path.open("rb") as fh:

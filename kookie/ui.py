@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 TEXT_FOREGROUND_COLOR = (0.10, 0.12, 0.15, 1.0)
-TEXT_BACKGROUND_COLOR = (0.96, 0.97, 0.98, 1.0)
+TEXT_BACKGROUND_COLOR = (0.94, 0.95, 0.97, 1.0)
 TEXT_SELECTION_COLOR = (0.70, 0.82, 0.98, 0.70)
 TEXT_CURSOR_COLOR = (0.17, 0.40, 0.85, 1.0)
 
@@ -15,11 +15,15 @@ def _text_input_config(initial_text: str) -> dict[str, object]:
         "readonly": False,
         "disabled": False,
         "input_type": "text",
+        "background_normal": "",
+        "background_active": "",
+        "background_disabled_normal": "",
         "font_size": 18,
         "foreground_color": TEXT_FOREGROUND_COLOR,
-        "background_color": (0, 0, 0, 0),
+        "background_color": TEXT_BACKGROUND_COLOR,
         "selection_color": TEXT_SELECTION_COLOR,
         "cursor_color": TEXT_CURSOR_COLOR,
+        "padding": [14, 14, 14, 14],
     }
 
 
@@ -38,7 +42,6 @@ def run_kivy_ui(runtime) -> None:
     try:
         from kivy.app import App
         from kivy.clock import Clock
-        from kivy.graphics import Color, RoundedRectangle
         from kivy.uix.boxlayout import BoxLayout
         from kivy.uix.button import Button
         from kivy.uix.label import Label
@@ -51,10 +54,7 @@ def run_kivy_ui(runtime) -> None:
             root = BoxLayout(orientation="vertical", spacing=12, padding=16)
 
             self.text_input = TextInput(**_text_input_config(initial_text=runtime.text))
-            with self.text_input.canvas.before:
-                Color(*TEXT_BACKGROUND_COLOR)
-                self._text_bg = RoundedRectangle(radius=[16, 16, 16, 16])
-            self.text_input.bind(pos=self._refresh_text_bg, size=self._refresh_text_bg)
+            self.text_input.bind(text=lambda _, value: runtime.set_text(value))
             root.add_widget(self.text_input)
 
             controls = BoxLayout(orientation="horizontal", size_hint_y=None, height=56, spacing=12)
@@ -122,10 +122,6 @@ def run_kivy_ui(runtime) -> None:
             self.voice_status.text = items[0]
             self.backend_status.text = items[1]
             self.activity_status.text = items[2]
-
-        def _refresh_text_bg(self, *_: Any) -> None:
-            self._text_bg.pos = self.text_input.pos
-            self._text_bg.size = self.text_input.size
 
     KookieApp().run()
 

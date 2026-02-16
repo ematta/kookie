@@ -7,3 +7,6 @@ def test_text_input_config_is_editable() -> None:
     assert cfg["disabled"] is False
     assert cfg["multiline"] is True
     assert cfg["input_type"] == "text"
+    assert cfg["background_normal"] == ""
+    assert cfg["background_active"] == ""
+    assert "background_disabled_active" not in cfg
