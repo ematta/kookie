@@ -3,6 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 
+def _next_text_value(current_text: str, clipboard_text: str | None, is_focused: bool) -> str:
+    if clipboard_text is None or is_focused:
+        return current_text
+    return clipboard_text
+
+
 def run_kivy_ui(runtime) -> None:
     try:
         from kivy.app import App
@@ -70,12 +76,14 @@ def run_kivy_ui(runtime) -> None:
             self._sync_now()
 
         def _sync_ui(self, *_: Any) -> None:
-            runtime.poll_clipboard_once()
+            clipboard_text = runtime.poll_clipboard_once()
+            next_text = _next_text_value(self.text_input.text, clipboard_text, self.text_input.focus)
+            if next_text != self.text_input.text:
+                self.text_input.text = next_text
+            runtime.set_text(self.text_input.text)
             self._sync_now()
 
         def _sync_now(self) -> None:
-            if self.text_input.text != runtime.text:
-                self.text_input.text = runtime.text
             items = runtime.status_bar_items
             self.voice_status.text = items[0]
             self.backend_status.text = items[1]

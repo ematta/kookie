@@ -29,7 +29,11 @@ class ClipboardMonitor:
 
     def start(self, scheduler: Callable[[Callable[..., object], float], object]) -> None:
         self.stop()
-        self._scheduled_event = scheduler(lambda *_: self.poll_once(), self.poll_interval)
+        def _tick(*_):
+            self.poll_once()
+            return True
+
+        self._scheduled_event = scheduler(_tick, self.poll_interval)
 
     def stop(self) -> None:
         if self._scheduled_event is None:
