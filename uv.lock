@@ -336,6 +336,7 @@ dependencies = [
     { name = "kokoro-onnx" },
     { name = "numpy" },
     { name = "onnxruntime" },
+    { name = "pyinstaller" },
     { name = "sounddevice" },
 ]
 
@@ -353,6 +354,7 @@ requires-dist = [
     { name = "kokoro-onnx", specifier = ">=0.4.0" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "onnxruntime", specifier = ">=1.18.0" },
+    { name = "pyinstaller", specifier = ">=6.19.0" },
     { name = "pyinstaller", marker = "extra == 'dev'", specifier = ">=6.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },

@@ -38,6 +38,14 @@ The UI includes a status bar with three fields:
 - `Backend: ...` (active backend mode)
 - `State: ...` (runtime playback/activity state)
 
+## Input behavior
+
+- Playback always uses the current contents of the text area.
+- You can type directly in the text area.
+- Use `Paste` (or `Cmd+V`) to copy text from another window into the text area.
+- Automatic clipboard-to-text-area syncing is disabled by default.
+- To re-enable automatic sync, set `KOOKIE_AUTO_CLIPBOARD_SYNC=true`.
+
 ## Environment configuration
 
 - `KOOKIE_BACKEND_MODE`: `auto` (default), `mock`, `real`
@@ -49,6 +57,7 @@ The UI includes a status bar with three fields:
 - `KOOKIE_DEFAULT_VOICE`: default `af_sarah`
 - `KOOKIE_SAMPLE_RATE`: default `24000`
 - `KOOKIE_CLIPBOARD_POLL_INTERVAL`: default `0.5`
+- `KOOKIE_AUTO_CLIPBOARD_SYNC`: default `false`
 - `KOOKIE_DOWNLOAD_TIMEOUT`: default `30`
 
 ## Packaging

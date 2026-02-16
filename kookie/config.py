@@ -24,6 +24,7 @@ class AppConfig:
     default_voice: str = "af_sarah"
     sample_rate: int = 24_000
     clipboard_poll_interval: float = 0.5
+    auto_clipboard_sync: bool = False
     download_timeout: float = 30.0
 
     @classmethod
@@ -37,6 +38,7 @@ class AppConfig:
 
         sample_rate = _safe_int(os.getenv("KOOKIE_SAMPLE_RATE"), default=24_000)
         poll_interval = _safe_float(os.getenv("KOOKIE_CLIPBOARD_POLL_INTERVAL"), default=0.5)
+        auto_clipboard_sync = _safe_bool(os.getenv("KOOKIE_AUTO_CLIPBOARD_SYNC"), default=False)
         download_timeout = _safe_float(os.getenv("KOOKIE_DOWNLOAD_TIMEOUT"), default=30.0)
 
         return cls(
@@ -49,6 +51,7 @@ class AppConfig:
             default_voice=os.getenv("KOOKIE_DEFAULT_VOICE", "af_sarah").strip() or "af_sarah",
             sample_rate=sample_rate,
             clipboard_poll_interval=poll_interval,
+            auto_clipboard_sync=auto_clipboard_sync,
             download_timeout=download_timeout,
         )
 
@@ -80,3 +83,14 @@ def _clean_optional(value: str | None) -> str | None:
         return None
     cleaned = value.strip()
     return cleaned or None
+
+
+def _safe_bool(value: str | None, default: bool) -> bool:
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return default
