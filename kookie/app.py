@@ -21,6 +21,20 @@ class AppRuntime:
     clipboard_monitor: ClipboardMonitor
     text: str = ""
     status_message: str = "Ready"
+    voice_status: str = "Voice: Missing"
+    backend_status: str = "Backend: Unknown"
+
+    @property
+    def status_bar_items(self) -> list[str]:
+        return [
+            self.voice_status,
+            self.backend_status,
+            f"State: {self.status_message}",
+        ]
+
+    @property
+    def status_bar_text(self) -> str:
+        return " | ".join(self.status_bar_items)
 
     def set_text(self, value: str) -> None:
         self.text = normalize_text(value)
@@ -109,6 +123,8 @@ def create_app(
         controller=controller,
         clipboard_monitor=monitor,
         status_message=_initial_status_message(assets=assets, backend_name=getattr(backend, "name", "unknown")),
+        voice_status=_voice_status(assets=assets),
+        backend_status=_backend_status(backend_name=getattr(backend, "name", "unknown")),
     )
     runtime_holder["runtime"] = runtime
     return runtime
@@ -138,3 +154,12 @@ def _initial_status_message(assets: ResolvedAssets, backend_name: str) -> str:
         if not assets.ready:
             return "Model assets unavailable. Running in mock mode until download succeeds."
     return "Ready"
+
+
+def _voice_status(assets: ResolvedAssets) -> str:
+    return "Voice: Available" if assets.voices_path is not None else "Voice: Missing"
+
+
+def _backend_status(backend_name: str) -> str:
+    display = backend_name.replace("_", " ").strip().title() if backend_name else "Unknown"
+    return f"Backend: {display}"

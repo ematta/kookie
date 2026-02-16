@@ -42,11 +42,18 @@ def run_kivy_ui(runtime) -> None:
             controls.add_widget(stop_btn)
             root.add_widget(controls)
 
-            self.status = Label(text=runtime.status_message, size_hint_y=None, height=32, halign="left")
-            root.add_widget(self.status)
+            status_bar = BoxLayout(orientation="horizontal", size_hint_y=None, height=36, spacing=12, padding=[8, 4])
+            self.voice_status = Label(text="", halign="left", valign="middle")
+            self.backend_status = Label(text="", halign="left", valign="middle")
+            self.activity_status = Label(text="", halign="left", valign="middle")
+            status_bar.add_widget(self.voice_status)
+            status_bar.add_widget(self.backend_status)
+            status_bar.add_widget(self.activity_status)
+            root.add_widget(status_bar)
 
             runtime.clipboard_monitor.start(Clock.schedule_interval)
             Clock.schedule_interval(self._sync_ui, 0.1)
+            self._sync_now()
             return root
 
         def on_stop(self):
@@ -69,7 +76,10 @@ def run_kivy_ui(runtime) -> None:
         def _sync_now(self) -> None:
             if self.text_input.text != runtime.text:
                 self.text_input.text = runtime.text
-            self.status.text = runtime.status_message
+            items = runtime.status_bar_items
+            self.voice_status.text = items[0]
+            self.backend_status.text = items[1]
+            self.activity_status.text = items[2]
 
         def _refresh_text_bg(self, *_: Any) -> None:
             self._text_bg.pos = self.text_input.pos

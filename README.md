@@ -8,6 +8,36 @@ Local-first macOS desktop text-to-speech app using Kivy and Kokoro.
 python main.py
 ```
 
+## Preload voice
+
+```bash
+scripts/preload_voice.sh
+```
+
+This pre-load step checks for `voices.bin` in `KOOKIE_ASSET_DIR` (or the default assets path) and downloads it if missing.
+
+### Preload 404 troubleshooting
+
+If preload fails with:
+
+`Voice preload failed: failed to download voices: HTTP Error 404: Not Found`
+
+the default voice URL is likely stale. Override the model and voice URLs before running preload:
+
+```bash
+export KOOKIE_MODEL_URL="https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.onnx"
+export KOOKIE_VOICES_URL="https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.bin"
+scripts/preload_voice.sh
+```
+
+## Status bar
+
+The UI includes a status bar with three fields:
+
+- `Voice: ...` (first field, availability of `voices.bin`)
+- `Backend: ...` (active backend mode)
+- `State: ...` (runtime playback/activity state)
+
 ## Environment configuration
 
 - `KOOKIE_BACKEND_MODE`: `auto` (default), `mock`, `real`
