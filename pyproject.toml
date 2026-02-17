@@ -24,6 +24,7 @@ dev = [
 [project.scripts]
 kookie = "kookie.__main__:main"
 kookie-preload-voice = "kookie.preload:main"
+kookie-update-agents = "kookie.agents_updater:main"
 
 [tool.pytest.ini_options]
 minversion = "8.0"

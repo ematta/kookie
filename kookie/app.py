@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Callable
 
 from .assets import ResolvedAssets, resolve_assets
@@ -9,6 +11,7 @@ from .backends import BackendSelectionError, select_backend
 from .clipboard import ClipboardMonitor
 from .config import AppConfig, load_config
 from .controller import ControllerEvent, PlaybackController
+from .export import save_speech_to_mp3
 from .text_processing import normalize_text
 
 
@@ -51,6 +54,27 @@ class AppRuntime:
 
     def stop(self) -> bool:
         return self.controller.stop()
+
+    def save_mp3(self, output_path: Path | None = None) -> Path | None:
+        if not self.text:
+            self.status_message = "Enter text or copy text to the clipboard."
+            return None
+
+        selected_output = output_path or _default_mp3_output_path()
+        try:
+            saved_path = save_speech_to_mp3(
+                backend=self.backend,
+                text=self.text,
+                voice=self.config.default_voice,
+                sample_rate=self.config.sample_rate,
+                output_path=selected_output,
+            )
+        except Exception as exc:
+            self.status_message = f"Unable to save MP3: {exc}"
+            return None
+
+        self.status_message = f"Saved MP3: {saved_path}"
+        return saved_path
 
     def wait_until_idle(self, timeout: float = 5.0) -> None:
         self.controller.wait_until_idle(timeout=timeout)
@@ -163,3 +187,8 @@ def _voice_status(assets: ResolvedAssets) -> str:
 def _backend_status(backend_name: str) -> str:
     display = backend_name.replace("_", " ").strip().title() if backend_name else "Unknown"
     return f"Backend: {display}"
+
+
+def _default_mp3_output_path() -> Path:
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return Path.home() / "Downloads" / f"kookie-{stamp}.mp3"

@@ -61,12 +61,15 @@ def run_kivy_ui(runtime) -> None:
             paste_btn = Button(text="Paste")
             play_btn = Button(text="Play")
             stop_btn = Button(text="Stop")
+            save_btn = Button(text="Save MP3")
             paste_btn.bind(on_press=lambda *_: self._on_paste())
             play_btn.bind(on_press=lambda *_: self._on_play())
             stop_btn.bind(on_press=lambda *_: self._on_stop())
+            save_btn.bind(on_press=lambda *_: self._on_save())
             controls.add_widget(paste_btn)
             controls.add_widget(play_btn)
             controls.add_widget(stop_btn)
+            controls.add_widget(save_btn)
             root.add_widget(controls)
 
             status_bar = BoxLayout(orientation="horizontal", size_hint_y=None, height=36, spacing=12, padding=[8, 4])
@@ -103,6 +106,11 @@ def run_kivy_ui(runtime) -> None:
 
         def _on_stop(self) -> None:
             runtime.stop()
+            self._sync_now()
+
+        def _on_save(self) -> None:
+            runtime.set_text(self.text_input.text)
+            runtime.save_mp3()
             self._sync_now()
 
         def _sync_ui(self, *_: Any) -> None:
