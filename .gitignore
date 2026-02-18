@@ -179,3 +179,4 @@ pyrightconfig.json
 .uv-cache/
 .pyinstaller/
 .kivy/
+.DS_Store

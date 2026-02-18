@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from kookie.export import encode_mp3, save_speech_to_mp3
+from kookie.export import _resolve_ffmpeg_executable, encode_mp3, save_speech_to_mp3
 
 
 class _Backend:
@@ -87,3 +87,52 @@ def test_encode_mp3_raises_when_ffmpeg_fails(tmp_path: Path) -> None:
             output_path=tmp_path / "speech.mp3",
             runner=_runner,
         )
+
+
+def test_resolve_ffmpeg_executable_prefers_env_override(tmp_path: Path) -> None:
+    configured = str(tmp_path / "custom-ffmpeg")
+    resolved = _resolve_ffmpeg_executable(
+        env={"KOOKIE_FFMPEG_PATH": configured},
+        runtime_base=tmp_path,
+        which=lambda _: None,
+    )
+    assert resolved == configured
+
+
+def test_resolve_ffmpeg_executable_uses_bundled_binary_when_available(tmp_path: Path) -> None:
+    bundled = tmp_path / "bin" / "ffmpeg"
+    bundled.parent.mkdir(parents=True, exist_ok=True)
+    bundled.write_text("#!/bin/sh\n", encoding="utf-8")
+
+    resolved = _resolve_ffmpeg_executable(
+        env={},
+        runtime_base=tmp_path,
+        which=lambda _: None,
+    )
+    assert resolved == str(bundled)
+
+
+def test_encode_mp3_uses_resolved_ffmpeg_executable(tmp_path: Path, monkeypatch) -> None:
+    capture: dict[str, object] = {}
+
+    class _CompletedProcess:
+        returncode = 0
+        stderr = b""
+
+    def _runner(command, **kwargs):
+        capture["command"] = command
+        capture["kwargs"] = kwargs
+        return _CompletedProcess()
+
+    monkeypatch.setattr("kookie.export._resolve_ffmpeg_executable", lambda: "/tmp/bundled/ffmpeg")
+
+    encode_mp3(
+        audio=np.array([0.1, 0.2], dtype=np.float32),
+        sample_rate=24_000,
+        output_path=tmp_path / "speech.mp3",
+        runner=_runner,
+    )
+
+    command = capture["command"]
+    assert isinstance(command, list)
+    assert command[0] == "/tmp/bundled/ffmpeg"

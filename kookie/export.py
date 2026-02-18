@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
+import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Callable
 
@@ -53,8 +57,9 @@ def encode_mp3(
     *,
     runner: Callable[..., object] = subprocess.run,
 ) -> None:
+    ffmpeg_executable = _resolve_ffmpeg_executable()
     command = [
-        "ffmpeg",
+        ffmpeg_executable,
         "-y",
         "-f",
         "f32le",
@@ -95,3 +100,31 @@ def encode_mp3(
     if detail:
         raise RuntimeError(f"MP3 encoding failed: {detail}")
     raise RuntimeError("MP3 encoding failed")
+
+
+def _resolve_ffmpeg_executable(
+    *,
+    env: Mapping[str, str] | None = None,
+    runtime_base: Path | None = None,
+    which: Callable[[str], str | None] = shutil.which,
+) -> str:
+    selected_env = dict(os.environ) if env is None else env
+    configured = selected_env.get("KOOKIE_FFMPEG_PATH", "").strip()
+    if configured:
+        return configured
+
+    base = runtime_base if runtime_base is not None else _runtime_base_path()
+    bundled_path = base / "bin" / "ffmpeg"
+    if bundled_path.exists():
+        return str(bundled_path)
+
+    resolved = which("ffmpeg")
+    if resolved:
+        return resolved
+    return "ffmpeg"
+
+
+def _runtime_base_path() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS"))  # type: ignore[arg-type]
+    return Path(__file__).resolve().parents[1]

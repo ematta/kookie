@@ -16,13 +16,33 @@ def test_pyinstaller_spec_contains_required_assets_and_hooks() -> None:
         "assets/voices.bin",
         "collect_data_files",
         "collect_dynamic_libs",
+        "collect_submodules",
         "pymupdf",
+        "ffmpeg",
         "scipy.special.cython_special",
         "sklearn.utils._typedefs",
     ]
 
     for token in required_tokens:
         assert token in contents
+
+
+def test_pyinstaller_spec_supports_optional_dynamic_import_packages() -> None:
+    spec_path = ROOT / "packaging" / "kookie.spec"
+    contents = spec_path.read_text(encoding="utf-8")
+
+    assert "optional_hidden_imports" in contents
+    assert "optional_package_submodules" in contents
+    assert 'optional_package_binaries("pymupdf")' in contents
+    assert '"fitz"' in contents
+
+
+def test_pyinstaller_spec_supports_optional_system_ffmpeg_binary() -> None:
+    spec_path = ROOT / "packaging" / "kookie.spec"
+    contents = spec_path.read_text(encoding="utf-8")
+
+    assert "optional_system_binary" in contents
+    assert 'optional_system_binary("ffmpeg")' in contents
 
 
 def test_pyinstaller_spec_does_not_depend_on___file__() -> None:
