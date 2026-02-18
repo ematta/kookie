@@ -27,17 +27,6 @@ def _text_input_config(initial_text: str) -> dict[str, object]:
     }
 
 
-def _next_text_value(
-    current_text: str,
-    clipboard_text: str | None,
-    is_focused: bool,
-    auto_clipboard_sync: bool,
-) -> str:
-    if not auto_clipboard_sync or clipboard_text is None or is_focused:
-        return current_text
-    return clipboard_text
-
-
 def run_kivy_ui(runtime) -> None:
     try:
         from kivy.app import App
@@ -58,15 +47,12 @@ def run_kivy_ui(runtime) -> None:
             root.add_widget(self.text_input)
 
             controls = BoxLayout(orientation="horizontal", size_hint_y=None, height=56, spacing=12)
-            paste_btn = Button(text="Paste")
             play_btn = Button(text="Play")
             stop_btn = Button(text="Stop")
             save_btn = Button(text="Save MP3")
-            paste_btn.bind(on_press=lambda *_: self._on_paste())
             play_btn.bind(on_press=lambda *_: self._on_play())
             stop_btn.bind(on_press=lambda *_: self._on_stop())
             save_btn.bind(on_press=lambda *_: self._on_save())
-            controls.add_widget(paste_btn)
             controls.add_widget(play_btn)
             controls.add_widget(stop_btn)
             controls.add_widget(save_btn)
@@ -81,27 +67,17 @@ def run_kivy_ui(runtime) -> None:
             status_bar.add_widget(self.activity_status)
             root.add_widget(status_bar)
 
-            if runtime.config.auto_clipboard_sync:
-                runtime.clipboard_monitor.start(Clock.schedule_interval)
             Clock.schedule_interval(self._sync_ui, 0.1)
             self._sync_now()
             Clock.schedule_once(lambda *_: setattr(self.text_input, "focus", True), 0)
             return root
 
         def on_stop(self):
-            runtime.clipboard_monitor.stop()
             runtime.stop()
 
         def _on_play(self) -> None:
             runtime.set_text(self.text_input.text)
             runtime.play()
-            self._sync_now()
-
-        def _on_paste(self) -> None:
-            pasted = _read_clipboard_text()
-            if pasted:
-                self.text_input.text = pasted
-                runtime.set_text(self.text_input.text)
             self._sync_now()
 
         def _on_stop(self) -> None:
@@ -114,15 +90,6 @@ def run_kivy_ui(runtime) -> None:
             self._sync_now()
 
         def _sync_ui(self, *_: Any) -> None:
-            clipboard_text = runtime.poll_clipboard_once() if runtime.config.auto_clipboard_sync else None
-            next_text = _next_text_value(
-                self.text_input.text,
-                clipboard_text,
-                self.text_input.focus,
-                runtime.config.auto_clipboard_sync,
-            )
-            if next_text != self.text_input.text:
-                self.text_input.text = next_text
             self._sync_now()
 
         def _sync_now(self) -> None:
@@ -132,13 +99,3 @@ def run_kivy_ui(runtime) -> None:
             self.activity_status.text = items[2]
 
     KookieApp().run()
-
-
-def _read_clipboard_text() -> str:
-    try:
-        from kivy.core.clipboard import Clipboard  # type: ignore
-
-        value = Clipboard.paste()
-        return value if isinstance(value, str) else ""
-    except Exception:
-        return ""

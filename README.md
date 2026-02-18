@@ -42,10 +42,8 @@ The UI includes a status bar with three fields:
 
 - Playback always uses the current contents of the text area.
 - You can type directly in the text area.
-- Use `Paste` (or `Cmd+V`) to copy text from another window into the text area.
+- Paste directly into the text area with `Cmd+V`.
 - Use `Save MP3` to export synthesized speech to `~/Downloads/kookie-<timestamp>.mp3`.
-- Automatic clipboard-to-text-area syncing is disabled by default.
-- To re-enable automatic sync, set `KOOKIE_AUTO_CLIPBOARD_SYNC=true`.
 
 MP3 export shells out to `ffmpeg`; install it if you want to use `Save MP3`.
 
@@ -59,8 +57,6 @@ MP3 export shells out to `ffmpeg`; install it if you want to use `Save MP3`.
 - `KOOKIE_VOICES_SHA256`: optional checksum for voices file
 - `KOOKIE_DEFAULT_VOICE`: default `af_sarah`
 - `KOOKIE_SAMPLE_RATE`: default `24000`
-- `KOOKIE_CLIPBOARD_POLL_INTERVAL`: default `0.5`
-- `KOOKIE_AUTO_CLIPBOARD_SYNC`: default `false`
 - `KOOKIE_DOWNLOAD_TIMEOUT`: default `30`
 
 ## Packaging

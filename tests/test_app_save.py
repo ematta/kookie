@@ -22,7 +22,7 @@ def test_save_mp3_requires_text(tmp_path: Path) -> None:
     )
 
     assert runtime.save_mp3(output_path=tmp_path / "speech.mp3") is None
-    assert runtime.status_message == "Enter text or copy text to the clipboard."
+    assert runtime.status_message == "Enter text in the text area."
 
 
 def test_save_mp3_updates_status_on_success(tmp_path: Path, monkeypatch) -> None:

@@ -3,12 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Callable
 
 from .assets import ResolvedAssets, resolve_assets
 from .audio import AudioPlayer
 from .backends import BackendSelectionError, select_backend
-from .clipboard import ClipboardMonitor
 from .config import AppConfig, load_config
 from .controller import ControllerEvent, PlaybackController
 from .export import save_speech_to_mp3
@@ -21,7 +19,6 @@ class AppRuntime:
     assets: ResolvedAssets
     backend: object
     controller: PlaybackController
-    clipboard_monitor: ClipboardMonitor
     text: str = ""
     status_message: str = "Ready"
     voice_status: str = "Voice: Missing"
@@ -44,7 +41,7 @@ class AppRuntime:
 
     def play(self) -> bool:
         if not self.text:
-            self.status_message = "Enter text or copy text to the clipboard."
+            self.status_message = "Enter text in the text area."
             return False
 
         started = self.controller.start(self.text, voice=self.config.default_voice)
@@ -57,7 +54,7 @@ class AppRuntime:
 
     def save_mp3(self, output_path: Path | None = None) -> Path | None:
         if not self.text:
-            self.status_message = "Enter text or copy text to the clipboard."
+            self.status_message = "Enter text in the text area."
             return None
 
         selected_output = output_path or _default_mp3_output_path()
@@ -78,9 +75,6 @@ class AppRuntime:
 
     def wait_until_idle(self, timeout: float = 5.0) -> None:
         self.controller.wait_until_idle(timeout=timeout)
-
-    def poll_clipboard_once(self) -> str | None:
-        return self.clipboard_monitor.poll_once()
 
     @property
     def backend_name(self) -> str:
@@ -106,7 +100,6 @@ def create_app(
     *,
     ensure_download: bool = True,
     audio_player: AudioPlayer | None = None,
-    read_clipboard: Callable[[], str] | None = None,
 ) -> AppRuntime:
     cfg = config or load_config()
     assets = resolve_assets(cfg, ensure_download=ensure_download)
@@ -133,19 +126,11 @@ def create_app(
         on_event=on_event,
     )
 
-    reader = read_clipboard or _default_clipboard_reader
-    monitor = ClipboardMonitor(
-        read_clipboard=reader,
-        on_new_text=lambda value: runtime_holder["runtime"].set_text(value),
-        poll_interval=cfg.clipboard_poll_interval,
-    )
-
     runtime = AppRuntime(
         config=cfg,
         assets=assets,
         backend=backend,
         controller=controller,
-        clipboard_monitor=monitor,
         status_message=_initial_status_message(assets=assets, backend_name=getattr(backend, "name", "unknown")),
         voice_status=_voice_status(assets=assets),
         backend_status=_backend_status(backend_name=getattr(backend, "name", "unknown")),
@@ -159,16 +144,6 @@ def run() -> None:
     from .ui import run_kivy_ui
 
     run_kivy_ui(runtime)
-
-
-def _default_clipboard_reader() -> str:
-    try:
-        from kivy.core.clipboard import Clipboard  # type: ignore
-
-        value = Clipboard.paste()
-        return value if isinstance(value, str) else ""
-    except Exception:
-        return ""
 
 
 def _initial_status_message(assets: ResolvedAssets, backend_name: str) -> str:
