@@ -43,6 +43,11 @@ The UI includes a status bar with three fields:
 - Playback always uses the current contents of the text area.
 - You can type directly in the text area.
 - Paste directly into the text area with `Cmd+V`.
+- The editor starts at `20 pt` text with word wrap enabled.
+- Use the font picker and size picker above the editor to customize readability.
+- Use the `Word Wrap` toggle to switch between wrapped and horizontal-scroll editing.
+- The editor shows a right-side scrollbar for long text.
+- Font, size, and wrap preferences persist across app launches in `~/Library/Application Support/Kookie/editor_prefs.json`.
 - Use `Load PDF` to import text from a `.pdf` file into the editor.
 - Loading a PDF replaces existing text in the editor.
 - Use `Save MP3` to export synthesized speech to `~/Downloads/kookie-<timestamp>.mp3`.
