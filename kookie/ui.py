@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import subprocess
+import sys
+from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .editor_prefs import (
     CURATED_FONT_NAMES,
@@ -31,6 +34,8 @@ STATUS_ACTIVITY_MAX_CHARS = 72
 STATUS_BAR_HEIGHT = 74
 STATUS_HEADER_HEIGHT = 30
 STATUS_ACTIVITY_ROW_MIN_HEIGHT = 30
+NATIVE_OPEN_FILE_TYPES = (("PDF files", "*.pdf"), ("All files", "*.*"))
+NATIVE_SAVE_FILE_TYPES = (("MP3 files", "*.mp3"), ("All files", "*.*"))
 
 
 def _text_input_config(initial_text: str, *, prefs: EditorPreferences) -> dict[str, object]:
@@ -123,6 +128,218 @@ def _control_style(*, background_color: tuple[float, float, float, float]) -> di
     }
 
 
+def _resolve_native_dialog_bindings() -> tuple[Callable[[], Any], Callable[..., str], Callable[..., str]]:
+    try:
+        from tkinter import Tk
+        from tkinter.filedialog import askopenfilename, asksaveasfilename
+    except Exception as exc:  # pragma: no cover - depends on local GUI deps
+        raise RuntimeError("Native file dialogs are unavailable in this Python environment.") from exc
+
+    return Tk, askopenfilename, asksaveasfilename
+
+
+def _apple_script_string(value: str) -> str:
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def _allowed_file_types(filetypes: tuple[tuple[str, str], ...]) -> tuple[str, ...]:
+    extensions: list[str] = []
+    for _label, pattern in filetypes:
+        for raw_glob in pattern.split(";"):
+            glob = raw_glob.strip()
+            if not glob.startswith("*."):
+                continue
+            extension = glob[2:].strip().lower()
+            if not extension or extension == "*":
+                continue
+            if extension not in extensions:
+                extensions.append(extension)
+    return tuple(extensions)
+
+
+def _build_macos_dialog_script(
+    *,
+    mode: str,
+    title: str,
+    initial_dir: Path,
+    filetypes: tuple[tuple[str, str], ...],
+    initial_file: str | None = None,
+) -> str:
+    script_lines = [
+        f"set _defaultLocation to POSIX file {_apple_script_string(str(initial_dir))}",
+    ]
+    if mode == "open":
+        open_line = (
+            f"set _pickedFile to choose file with prompt {_apple_script_string(title)} "
+            "default location _defaultLocation"
+        )
+        allowed_types = _allowed_file_types(filetypes)
+        if allowed_types:
+            types_literal = ", ".join(_apple_script_string(value) for value in allowed_types)
+            open_line += f" of type {{{types_literal}}}"
+        script_lines.append(open_line)
+    else:
+        save_line = (
+            f"set _pickedFile to choose file name with prompt {_apple_script_string(title)} "
+            "default location _defaultLocation"
+        )
+        if initial_file:
+            save_line += f" default name {_apple_script_string(initial_file)}"
+        script_lines.append(save_line)
+    script_lines.append("POSIX path of _pickedFile")
+    return "\n".join(script_lines)
+
+
+def _dialog_selection_to_path(selection: str | Path | None) -> Path | None:
+    if selection is None:
+        return None
+
+    if isinstance(selection, Path):
+        selected = selection
+    elif isinstance(selection, str):
+        stripped = selection.strip()
+        if not stripped:
+            return None
+        selected = Path(stripped)
+    else:
+        return None
+
+    return selected.expanduser()
+
+
+def _native_file_dialog(
+    *,
+    mode: str,
+    title: str,
+    initial_dir: Path,
+    filetypes: tuple[tuple[str, str], ...],
+    initial_file: str | None = None,
+    default_extension: str | None = None,
+    tk_factory: Callable[[], Any] | None = None,
+    askopenfilename: Callable[..., str] | None = None,
+    asksaveasfilename: Callable[..., str] | None = None,
+    platform_name: str | None = None,
+    osascript_runner: Callable[..., Any] | None = None,
+) -> Path | None:
+    if mode not in {"open", "save"}:
+        raise ValueError("mode must be 'open' or 'save'")
+
+    selected_platform = platform_name or sys.platform
+    if selected_platform == "darwin":
+        run = osascript_runner or subprocess.run
+        script = _build_macos_dialog_script(
+            mode=mode,
+            title=title,
+            initial_dir=initial_dir,
+            filetypes=filetypes,
+            initial_file=initial_file,
+        )
+        try:
+            completed = run(
+                ["osascript", "-e", script],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            stderr_lower = (exc.stderr or "").lower()
+            if "(-128)" in stderr_lower or "cancel" in stderr_lower:
+                return None
+            detail = (exc.stderr or exc.stdout or str(exc)).strip()
+            raise RuntimeError(f"Native file dialog failed: {detail}") from exc
+
+        return _dialog_selection_to_path(getattr(completed, "stdout", None))
+
+    if tk_factory is None or askopenfilename is None or asksaveasfilename is None:
+        default_factory, default_open, default_save = _resolve_native_dialog_bindings()
+        if tk_factory is None:
+            tk_factory = default_factory
+        if askopenfilename is None:
+            askopenfilename = default_open
+        if asksaveasfilename is None:
+            asksaveasfilename = default_save
+
+    root = tk_factory()
+    try:
+        if hasattr(root, "withdraw"):
+            root.withdraw()
+        try:
+            root.attributes("-topmost", True)
+        except Exception:
+            pass
+
+        dialog_kwargs: dict[str, object] = {
+            "title": title,
+            "initialdir": str(initial_dir),
+            "filetypes": filetypes,
+            "parent": root,
+        }
+        if mode == "open":
+            selection = askopenfilename(**dialog_kwargs)
+        else:
+            if initial_file is not None:
+                dialog_kwargs["initialfile"] = initial_file
+            if default_extension is not None:
+                dialog_kwargs["defaultextension"] = default_extension
+            selection = asksaveasfilename(**dialog_kwargs)
+    finally:
+        try:
+            root.destroy()
+        except Exception:
+            pass
+
+    return _dialog_selection_to_path(selection)
+
+
+def _default_dialog_dir(*, home_dir: Path | None = None) -> Path:
+    selected_home = home_dir or Path.home()
+    downloads_dir = selected_home / "Downloads"
+    if downloads_dir.exists() and downloads_dir.is_dir():
+        return downloads_dir
+    return selected_home
+
+
+def _default_mp3_filename(*, now: datetime | None = None) -> str:
+    selected_now = now or datetime.now()
+    return f"kookie-{selected_now.strftime('%Y%m%d-%H%M%S')}.mp3"
+
+
+def _prompt_pdf_path(
+    *,
+    dialog: Callable[..., Path | None] = _native_file_dialog,
+    home_dir: Path | None = None,
+) -> Path | None:
+    return dialog(
+        mode="open",
+        title="Load PDF",
+        initial_dir=home_dir or Path.home(),
+        filetypes=NATIVE_OPEN_FILE_TYPES,
+    )
+
+
+def _prompt_mp3_output_path(
+    *,
+    dialog: Callable[..., Path | None] = _native_file_dialog,
+    home_dir: Path | None = None,
+    now: datetime | None = None,
+) -> Path | None:
+    selected_output = dialog(
+        mode="save",
+        title="Save MP3",
+        initial_dir=_default_dialog_dir(home_dir=home_dir),
+        filetypes=NATIVE_SAVE_FILE_TYPES,
+        initial_file=_default_mp3_filename(now=now),
+        default_extension=".mp3",
+    )
+    if selected_output is None:
+        return None
+
+    if selected_output.suffix.lower() != ".mp3":
+        return selected_output.with_suffix(".mp3")
+    return selected_output
+
+
 def run_kivy_ui(runtime) -> None:
     try:
         from kivy.app import App
@@ -131,9 +348,7 @@ def run_kivy_ui(runtime) -> None:
         from kivy.graphics import Color, Rectangle
         from kivy.uix.boxlayout import BoxLayout
         from kivy.uix.button import Button
-        from kivy.uix.filechooser import FileChooserListView
         from kivy.uix.label import Label
-        from kivy.uix.popup import Popup
         from kivy.uix.scrollview import ScrollView
         from kivy.uix.spinner import Spinner
         from kivy.uix.textinput import TextInput
@@ -262,45 +477,22 @@ def run_kivy_ui(runtime) -> None:
             runtime.stop()
 
         def _on_load_pdf(self) -> None:
-            chooser = FileChooserListView(
-                path=str(Path.home()),
-                filters=["*.pdf"],
-                multiselect=False,
-            )
-
-            actions = BoxLayout(orientation="horizontal", size_hint_y=None, height=52, spacing=8)
-            cancel_btn = Button(text="Cancel")
-            load_btn = Button(text="Load")
-            actions.add_widget(cancel_btn)
-            actions.add_widget(load_btn)
-
-            container = BoxLayout(orientation="vertical", spacing=8, padding=8)
-            container.add_widget(chooser)
-            container.add_widget(actions)
-
-            popup = Popup(
-                title="Load PDF",
-                content=container,
-                size_hint=(0.9, 0.9),
-                auto_dismiss=False,
-            )
-            cancel_btn.bind(on_press=lambda *_: popup.dismiss())
-            load_btn.bind(on_press=lambda *_: self._confirm_pdf_selection(popup, chooser))
-            popup.open()
-
-        def _confirm_pdf_selection(self, popup: Any, chooser: Any) -> None:
-            selection = list(getattr(chooser, "selection", []))
-            if not selection:
-                runtime.status_message = "Select a PDF file to load."
+            try:
+                selected_path = _prompt_pdf_path()
+            except RuntimeError as exc:
+                runtime.status_message = str(exc)
                 self._sync_now()
                 return
 
-            selected_path = Path(selection[0])
+            if selected_path is None:
+                runtime.status_message = "Load cancelled."
+                self._sync_now()
+                return
+
             loaded_text = runtime.load_pdf(selected_path)
             if loaded_text is not None:
                 self.text_input.text = loaded_text
                 self._sync_text_input_size()
-                popup.dismiss()
             self._sync_now()
 
         def _on_play(self) -> None:
@@ -314,7 +506,24 @@ def run_kivy_ui(runtime) -> None:
 
         def _on_save(self) -> None:
             runtime.set_text(self.text_input.text)
-            runtime.start_mp3_save()
+            if not runtime.text:
+                runtime.status_message = "Enter text in the text area."
+                self._sync_now()
+                return
+
+            try:
+                output_path = _prompt_mp3_output_path()
+            except RuntimeError as exc:
+                runtime.status_message = str(exc)
+                self._sync_now()
+                return
+
+            if output_path is None:
+                runtime.status_message = "Save cancelled."
+                self._sync_now()
+                return
+
+            runtime.start_mp3_save(output_path=output_path)
             self._sync_now()
 
         def _sync_ui(self, *_: Any) -> None:
