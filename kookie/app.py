@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import queue
+import threading
 from datetime import datetime
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable
 
@@ -25,6 +27,14 @@ class AppRuntime:
     status_message: str = "Ready"
     voice_status: str = "Voice: Missing"
     backend_status: str = "Backend: Unknown"
+    _mp3_save_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    _mp3_save_thread: threading.Thread | None = field(default=None, init=False, repr=False)
+    _mp3_save_results: "queue.Queue[tuple[Path | None, Exception | None]]" = field(
+        default_factory=queue.Queue,
+        init=False,
+        repr=False,
+    )
+    _is_saving_mp3: bool = field(default=False, init=False, repr=False)
 
     @property
     def status_bar_items(self) -> list[str]:
@@ -75,6 +85,70 @@ class AppRuntime:
         self.status_message = f"Saved MP3: {saved_path}"
         return saved_path
 
+    @property
+    def is_saving_mp3(self) -> bool:
+        with self._mp3_save_lock:
+            return self._is_saving_mp3
+
+    def start_mp3_save(self, output_path: Path | None = None) -> bool:
+        if not self.text:
+            self.status_message = "Enter text in the text area."
+            return False
+
+        selected_output = output_path or _default_mp3_output_path()
+
+        with self._mp3_save_lock:
+            if self._is_saving_mp3:
+                self.status_message = "MP3 save is already in progress."
+                return False
+
+            self._clear_mp3_save_results()
+            self._is_saving_mp3 = True
+            self.status_message = "Saving MP3..."
+            save_thread = threading.Thread(
+                target=self._run_mp3_save_worker,
+                kwargs={
+                    "backend": self.backend,
+                    "text": self.text,
+                    "voice": self.config.default_voice,
+                    "sample_rate": self.config.sample_rate,
+                    "output_path": selected_output,
+                },
+                daemon=True,
+                name="kookie-save-mp3",
+            )
+            self._mp3_save_thread = save_thread
+
+        save_thread.start()
+        return True
+
+    def poll_mp3_save(self) -> None:
+        latest_result: tuple[Path | None, Exception | None] | None = None
+        while True:
+            try:
+                latest_result = self._mp3_save_results.get_nowait()
+            except queue.Empty:
+                break
+
+        if latest_result is None:
+            return
+
+        saved_path, error = latest_result
+
+        with self._mp3_save_lock:
+            self._is_saving_mp3 = False
+            self._mp3_save_thread = None
+
+        if error is not None:
+            self.status_message = f"Unable to save MP3: {error}"
+            return
+
+        if saved_path is not None:
+            self.status_message = f"Saved MP3: {saved_path}"
+            return
+
+        self.status_message = "Unable to save MP3: Unknown save failure"
+
     def load_pdf(
         self,
         pdf_path: Path,
@@ -111,6 +185,36 @@ class AppRuntime:
             self.status_message = "Generating speech"
         elif event.state.value == "stopping":
             self.status_message = "Stopping"
+
+    def _clear_mp3_save_results(self) -> None:
+        while True:
+            try:
+                self._mp3_save_results.get_nowait()
+            except queue.Empty:
+                return
+
+    def _run_mp3_save_worker(
+        self,
+        *,
+        backend: object,
+        text: str,
+        voice: str,
+        sample_rate: int,
+        output_path: Path,
+    ) -> None:
+        try:
+            saved_path = save_speech_to_mp3(
+                backend=backend,
+                text=text,
+                voice=voice,
+                sample_rate=sample_rate,
+                output_path=output_path,
+            )
+        except Exception as exc:
+            self._mp3_save_results.put((None, exc))
+            return
+
+        self._mp3_save_results.put((saved_path, None))
 
 
 def create_app(

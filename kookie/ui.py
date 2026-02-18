@@ -16,6 +16,7 @@ TEXT_FOREGROUND_COLOR = (0.10, 0.12, 0.15, 1.0)
 TEXT_BACKGROUND_COLOR = (0.94, 0.95, 0.97, 1.0)
 TEXT_SELECTION_COLOR = (0.70, 0.82, 0.98, 0.70)
 TEXT_CURSOR_COLOR = (0.17, 0.40, 0.85, 1.0)
+SAVE_SPINNER_FRAMES = ("|", "/", "-", "\\")
 
 
 def _text_input_config(initial_text: str, *, prefs: EditorPreferences) -> dict[str, object]:
@@ -48,6 +49,14 @@ def _scroll_view_config(word_wrap: bool) -> dict[str, object]:
         "do_scroll_y": True,
         "do_scroll_x": not word_wrap,
     }
+
+
+def _save_spinner_text(*, is_saving: bool, tick: int) -> str:
+    if not is_saving:
+        return ""
+
+    frame = SAVE_SPINNER_FRAMES[tick % len(SAVE_SPINNER_FRAMES)]
+    return f"Saving MP3 {frame}"
 
 
 def run_kivy_ui(runtime) -> None:
@@ -121,18 +130,21 @@ def run_kivy_ui(runtime) -> None:
 
             controls = BoxLayout(orientation="horizontal", size_hint_y=None, height=56, spacing=12)
             load_btn = Button(text="Load PDF")
-            play_btn = Button(text="Play")
+            self.play_btn = Button(text="Play")
             stop_btn = Button(text="Stop")
-            save_btn = Button(text="Save MP3")
+            self.save_btn = Button(text="Save MP3")
+            self.save_spinner = Label(text="", halign="left", valign="middle", size_hint=(None, 1), width=140)
             load_btn.bind(on_press=lambda *_: self._on_load_pdf())
-            play_btn.bind(on_press=lambda *_: self._on_play())
+            self.play_btn.bind(on_press=lambda *_: self._on_play())
             stop_btn.bind(on_press=lambda *_: self._on_stop())
-            save_btn.bind(on_press=lambda *_: self._on_save())
+            self.save_btn.bind(on_press=lambda *_: self._on_save())
             controls.add_widget(load_btn)
-            controls.add_widget(play_btn)
+            controls.add_widget(self.play_btn)
             controls.add_widget(stop_btn)
-            controls.add_widget(save_btn)
+            controls.add_widget(self.save_btn)
+            controls.add_widget(self.save_spinner)
             root.add_widget(controls)
+            self._save_spinner_tick = 0
 
             status_bar = BoxLayout(orientation="horizontal", size_hint_y=None, height=36, spacing=12, padding=[8, 4])
             self.voice_status = Label(text="", halign="left", valign="middle")
@@ -205,13 +217,23 @@ def run_kivy_ui(runtime) -> None:
 
         def _on_save(self) -> None:
             runtime.set_text(self.text_input.text)
-            runtime.save_mp3()
+            runtime.start_mp3_save()
             self._sync_now()
 
         def _sync_ui(self, *_: Any) -> None:
             self._sync_now()
 
         def _sync_now(self) -> None:
+            runtime.poll_mp3_save()
+            is_saving = runtime.is_saving_mp3
+            self.save_btn.disabled = is_saving
+            self.play_btn.disabled = is_saving
+            self.save_spinner.text = _save_spinner_text(is_saving=is_saving, tick=self._save_spinner_tick)
+            if is_saving:
+                self._save_spinner_tick += 1
+            else:
+                self._save_spinner_tick = 0
+
             items = runtime.status_bar_items
             self.voice_status.text = items[0]
             self.backend_status.text = items[1]

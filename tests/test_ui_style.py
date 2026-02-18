@@ -1,4 +1,4 @@
-from kookie.ui import TEXT_FOREGROUND_COLOR, _scroll_view_config
+from kookie.ui import TEXT_FOREGROUND_COLOR, _save_spinner_text, _scroll_view_config
 
 
 def test_text_foreground_color_is_readable_dark_tone() -> None:
@@ -23,3 +23,16 @@ def test_scroll_view_config_enables_horizontal_scroll_when_wrap_disabled() -> No
     cfg = _scroll_view_config(word_wrap=False)
     assert cfg["do_scroll_y"] is True
     assert cfg["do_scroll_x"] is True
+
+
+def test_save_spinner_text_cycles_frames() -> None:
+    assert _save_spinner_text(is_saving=True, tick=0) == "Saving MP3 |"
+    assert _save_spinner_text(is_saving=True, tick=1) == "Saving MP3 /"
+    assert _save_spinner_text(is_saving=True, tick=2) == "Saving MP3 -"
+    assert _save_spinner_text(is_saving=True, tick=3) == "Saving MP3 \\"
+    assert _save_spinner_text(is_saving=True, tick=4) == "Saving MP3 |"
+
+
+def test_save_spinner_text_is_empty_when_not_saving() -> None:
+    assert _save_spinner_text(is_saving=False, tick=0) == ""
+    assert _save_spinner_text(is_saving=False, tick=99) == ""
