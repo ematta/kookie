@@ -1,4 +1,15 @@
-from kookie.ui import TEXT_FOREGROUND_COLOR, _save_spinner_text, _scroll_view_config
+from kookie.ui import (
+    STATUS_ACTIVITY_ROW_MIN_HEIGHT,
+    STATUS_ACTIVITY_MAX_CHARS,
+    STATUS_BAR_HEIGHT,
+    STATUS_HEADER_HEIGHT,
+    TEXT_FOREGROUND_COLOR,
+    _label_text_size_for_width,
+    _save_spinner_text,
+    _scroll_view_config,
+    _status_display_items,
+    _status_label_config,
+)
 
 
 def test_text_foreground_color_is_readable_dark_tone() -> None:
@@ -36,3 +47,39 @@ def test_save_spinner_text_cycles_frames() -> None:
 def test_save_spinner_text_is_empty_when_not_saving() -> None:
     assert _save_spinner_text(is_saving=False, tick=0) == ""
     assert _save_spinner_text(is_saving=False, tick=99) == ""
+
+
+def test_status_display_items_truncates_long_activity_message() -> None:
+    original_items = [
+        "Voice: Available",
+        "Backend: mock",
+        "State: Saved MP3: /Users/ematta/Downloads/very-long-file-name-for-audio-export.mp3",
+    ]
+
+    display_items = _status_display_items(original_items)
+
+    assert display_items[0] == original_items[0]
+    assert display_items[1] == original_items[1]
+    assert len(display_items[2]) <= STATUS_ACTIVITY_MAX_CHARS
+    assert display_items[2].startswith("State:")
+    assert "..." in display_items[2]
+
+
+def test_status_label_config_uses_single_line_shortening() -> None:
+    cfg = _status_label_config()
+
+    assert cfg["halign"] == "left"
+    assert cfg["valign"] == "middle"
+    assert cfg["shorten"] is True
+    assert cfg["shorten_from"] == "center"
+    assert cfg["max_lines"] == 1
+
+
+def test_status_layout_reserves_enough_vertical_space_for_two_rows() -> None:
+    assert STATUS_HEADER_HEIGHT >= 24
+    assert STATUS_ACTIVITY_ROW_MIN_HEIGHT >= 24
+    assert STATUS_BAR_HEIGHT >= STATUS_HEADER_HEIGHT + STATUS_ACTIVITY_ROW_MIN_HEIGHT
+
+
+def test_label_text_size_tracks_width_without_forcing_height() -> None:
+    assert _label_text_size_for_width(320) == (320, None)

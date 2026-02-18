@@ -17,6 +17,20 @@ TEXT_BACKGROUND_COLOR = (0.94, 0.95, 0.97, 1.0)
 TEXT_SELECTION_COLOR = (0.70, 0.82, 0.98, 0.70)
 TEXT_CURSOR_COLOR = (0.17, 0.40, 0.85, 1.0)
 SAVE_SPINNER_FRAMES = ("|", "/", "-", "\\")
+APP_BACKGROUND_COLOR = (0.07, 0.10, 0.15, 1.0)
+TOOLBAR_BACKGROUND_COLOR = (0.14, 0.18, 0.25, 1.0)
+CONTROL_SURFACE_COLOR = (0.21, 0.26, 0.34, 1.0)
+PRIMARY_BUTTON_COLOR = (0.19, 0.52, 0.75, 1.0)
+SUCCESS_BUTTON_COLOR = (0.22, 0.56, 0.39, 1.0)
+DANGER_BUTTON_COLOR = (0.70, 0.30, 0.29, 1.0)
+CONTROL_TEXT_COLOR = (0.96, 0.98, 1.0, 1.0)
+STATUS_TEXT_COLOR = (0.90, 0.93, 0.98, 1.0)
+STATUS_VOICE_MAX_CHARS = 24
+STATUS_BACKEND_MAX_CHARS = 28
+STATUS_ACTIVITY_MAX_CHARS = 72
+STATUS_BAR_HEIGHT = 74
+STATUS_HEADER_HEIGHT = 30
+STATUS_ACTIVITY_ROW_MIN_HEIGHT = 30
 
 
 def _text_input_config(initial_text: str, *, prefs: EditorPreferences) -> dict[str, object]:
@@ -59,10 +73,62 @@ def _save_spinner_text(*, is_saving: bool, tick: int) -> str:
     return f"Saving MP3 {frame}"
 
 
+def _shorten_middle(text: str, *, max_chars: int) -> str:
+    if max_chars <= 0:
+        return ""
+    if len(text) <= max_chars:
+        return text
+    if max_chars <= 3:
+        return text[:max_chars]
+
+    head_count = (max_chars - 3) // 2
+    tail_count = max_chars - 3 - head_count
+    return f"{text[:head_count]}...{text[-tail_count:]}"
+
+
+def _status_display_items(items: list[str]) -> tuple[str, str, str]:
+    voice = items[0] if items else ""
+    backend = items[1] if len(items) > 1 else ""
+    activity = items[2] if len(items) > 2 else ""
+    return (
+        _shorten_middle(voice, max_chars=STATUS_VOICE_MAX_CHARS),
+        _shorten_middle(backend, max_chars=STATUS_BACKEND_MAX_CHARS),
+        _shorten_middle(activity, max_chars=STATUS_ACTIVITY_MAX_CHARS),
+    )
+
+
+def _status_label_config() -> dict[str, object]:
+    return {
+        "halign": "left",
+        "valign": "middle",
+        "shorten": True,
+        "shorten_from": "center",
+        "max_lines": 1,
+        "color": STATUS_TEXT_COLOR,
+    }
+
+
+def _label_text_size_for_width(width: float) -> tuple[float, None]:
+    return (max(0.0, width), None)
+
+
+def _control_style(*, background_color: tuple[float, float, float, float]) -> dict[str, object]:
+    return {
+        "background_normal": "",
+        "background_down": "",
+        "background_disabled_normal": "",
+        "background_disabled_down": "",
+        "background_color": background_color,
+        "color": CONTROL_TEXT_COLOR,
+    }
+
+
 def run_kivy_ui(runtime) -> None:
     try:
         from kivy.app import App
         from kivy.clock import Clock
+        from kivy.core.window import Window
+        from kivy.graphics import Color, Rectangle
         from kivy.uix.boxlayout import BoxLayout
         from kivy.uix.button import Button
         from kivy.uix.filechooser import FileChooserListView
@@ -77,28 +143,39 @@ def run_kivy_ui(runtime) -> None:
 
     class KookieApp(App):
         def build(self):
-            root = BoxLayout(orientation="vertical", spacing=12, padding=16)
+            Window.clearcolor = APP_BACKGROUND_COLOR
+            root = BoxLayout(orientation="vertical", spacing=12, padding=[18, 14, 18, 14])
 
             self.editor_prefs = load_editor_preferences(runtime.config.asset_dir)
 
-            editor_controls = BoxLayout(orientation="horizontal", size_hint_y=None, height=48, spacing=8)
+            editor_controls = BoxLayout(
+                orientation="horizontal",
+                size_hint_y=None,
+                height=50,
+                spacing=8,
+                padding=[8, 6, 8, 6],
+            )
+            self._paint_background(editor_controls, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
             self.font_picker = Spinner(
                 text=self.editor_prefs.font_name,
                 values=list(CURATED_FONT_NAMES),
                 size_hint=(None, 1),
                 width=210,
+                **_control_style(background_color=CONTROL_SURFACE_COLOR),
             )
             self.font_size_picker = Spinner(
                 text=str(self.editor_prefs.font_size),
                 values=[str(size) for size in EDITOR_FONT_SIZES],
                 size_hint=(None, 1),
                 width=110,
+                **_control_style(background_color=CONTROL_SURFACE_COLOR),
             )
             self.word_wrap_toggle = ToggleButton(
                 text=self._wrap_label(self.editor_prefs.word_wrap),
                 state="down" if self.editor_prefs.word_wrap else "normal",
                 size_hint=(None, 1),
                 width=160,
+                **_control_style(background_color=PRIMARY_BUTTON_COLOR),
             )
             editor_controls.add_widget(self.font_picker)
             editor_controls.add_widget(self.font_size_picker)
@@ -128,12 +205,20 @@ def run_kivy_ui(runtime) -> None:
             self.font_size_picker.bind(text=lambda _, value: self._on_font_size_change(value))
             self.word_wrap_toggle.bind(state=lambda _, value: self._on_word_wrap_change(value))
 
-            controls = BoxLayout(orientation="horizontal", size_hint_y=None, height=56, spacing=12)
-            load_btn = Button(text="Load PDF")
-            self.play_btn = Button(text="Play")
-            stop_btn = Button(text="Stop")
-            self.save_btn = Button(text="Save MP3")
-            self.save_spinner = Label(text="", halign="left", valign="middle", size_hint=(None, 1), width=140)
+            controls = BoxLayout(
+                orientation="horizontal",
+                size_hint_y=None,
+                height=58,
+                spacing=10,
+                padding=[8, 7, 8, 7],
+            )
+            self._paint_background(controls, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
+            load_btn = Button(text="Load PDF", **_control_style(background_color=CONTROL_SURFACE_COLOR))
+            self.play_btn = Button(text="Play", **_control_style(background_color=PRIMARY_BUTTON_COLOR))
+            stop_btn = Button(text="Stop", **_control_style(background_color=DANGER_BUTTON_COLOR))
+            self.save_btn = Button(text="Save MP3", **_control_style(background_color=SUCCESS_BUTTON_COLOR))
+            self.save_spinner = Label(text="", size_hint=(None, 1), width=140, **_status_label_config())
+            self._bind_label_text_size(self.save_spinner)
             load_btn.bind(on_press=lambda *_: self._on_load_pdf())
             self.play_btn.bind(on_press=lambda *_: self._on_play())
             stop_btn.bind(on_press=lambda *_: self._on_stop())
@@ -146,12 +231,24 @@ def run_kivy_ui(runtime) -> None:
             root.add_widget(controls)
             self._save_spinner_tick = 0
 
-            status_bar = BoxLayout(orientation="horizontal", size_hint_y=None, height=36, spacing=12, padding=[8, 4])
-            self.voice_status = Label(text="", halign="left", valign="middle")
-            self.backend_status = Label(text="", halign="left", valign="middle")
-            self.activity_status = Label(text="", halign="left", valign="middle")
-            status_bar.add_widget(self.voice_status)
-            status_bar.add_widget(self.backend_status)
+            status_bar = BoxLayout(
+                orientation="vertical",
+                size_hint_y=None,
+                height=STATUS_BAR_HEIGHT,
+                spacing=4,
+                padding=[10, 8, 10, 8],
+            )
+            self._paint_background(status_bar, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
+            status_header = BoxLayout(orientation="horizontal", size_hint_y=None, height=STATUS_HEADER_HEIGHT, spacing=10)
+            self.voice_status = Label(text="", size_hint_x=0.42, **_status_label_config())
+            self.backend_status = Label(text="", size_hint_x=0.58, **_status_label_config())
+            self.activity_status = Label(text="", size_hint_y=None, height=STATUS_ACTIVITY_ROW_MIN_HEIGHT, **_status_label_config())
+            self._bind_label_text_size(self.voice_status)
+            self._bind_label_text_size(self.backend_status)
+            self._bind_label_text_size(self.activity_status)
+            status_header.add_widget(self.voice_status)
+            status_header.add_widget(self.backend_status)
+            status_bar.add_widget(status_header)
             status_bar.add_widget(self.activity_status)
             root.add_widget(status_bar)
 
@@ -234,10 +331,10 @@ def run_kivy_ui(runtime) -> None:
             else:
                 self._save_spinner_tick = 0
 
-            items = runtime.status_bar_items
-            self.voice_status.text = items[0]
-            self.backend_status.text = items[1]
-            self.activity_status.text = items[2]
+            voice_text, backend_text, activity_text = _status_display_items(runtime.status_bar_items)
+            self.voice_status.text = voice_text
+            self.backend_status.text = backend_text
+            self.activity_status.text = activity_text
 
         def _on_font_change(self, selected_font: str) -> None:
             self._set_editor_preferences(font_name=selected_font)
@@ -294,6 +391,10 @@ def run_kivy_ui(runtime) -> None:
             if self.word_wrap_toggle.state != target_state:
                 self.word_wrap_toggle.state = target_state
             self.word_wrap_toggle.text = self._wrap_label(self.editor_prefs.word_wrap)
+            if self.word_wrap_toggle.state == "down":
+                self.word_wrap_toggle.background_color = PRIMARY_BUTTON_COLOR
+            else:
+                self.word_wrap_toggle.background_color = CONTROL_SURFACE_COLOR
             self._sync_text_input_size()
 
         def _sync_text_input_size(self, *_: Any) -> None:
@@ -312,6 +413,26 @@ def run_kivy_ui(runtime) -> None:
 
         @staticmethod
         def _wrap_label(word_wrap: bool) -> str:
-            return "Word Wrap: On" if word_wrap else "Word Wrap: Off"
+            return "Wrap: On" if word_wrap else "Wrap: Off"
+
+        @staticmethod
+        def _paint_background(widget: Any, color: tuple[float, float, float, float], *, Color: Any, Rectangle: Any) -> None:
+            with widget.canvas.before:
+                Color(*color)
+                background_rect = Rectangle(pos=widget.pos, size=widget.size)
+
+            def _sync_background(instance, *_):
+                background_rect.pos = instance.pos
+                background_rect.size = instance.size
+
+            widget.bind(pos=_sync_background, size=_sync_background)
+
+        @staticmethod
+        def _bind_label_text_size(label: Any) -> None:
+            def _sync_text_size(instance, *_):
+                instance.text_size = _label_text_size_for_width(instance.width)
+
+            label.bind(size=_sync_text_size)
+            _sync_text_size(label)
 
     KookieApp().run()
