@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import Callable
 
 from .assets import ResolvedAssets, resolve_assets
 from .audio import AudioPlayer
@@ -10,6 +11,7 @@ from .backends import BackendSelectionError, select_backend
 from .config import AppConfig, load_config
 from .controller import ControllerEvent, PlaybackController
 from .export import save_speech_to_mp3
+from .pdf_import import extract_pdf_text
 from .text_processing import normalize_text
 
 
@@ -72,6 +74,22 @@ class AppRuntime:
 
         self.status_message = f"Saved MP3: {saved_path}"
         return saved_path
+
+    def load_pdf(
+        self,
+        pdf_path: Path,
+        *,
+        loader: Callable[[Path], str] = extract_pdf_text,
+    ) -> str | None:
+        try:
+            text = loader(pdf_path)
+        except Exception as exc:
+            self.status_message = f"Unable to load PDF: {exc}"
+            return None
+
+        self.set_text(text)
+        self.status_message = f"Loaded PDF: {pdf_path.name}"
+        return text
 
     def wait_until_idle(self, timeout: float = 5.0) -> None:
         self.controller.wait_until_idle(timeout=timeout)

@@ -43,7 +43,10 @@ The UI includes a status bar with three fields:
 - Playback always uses the current contents of the text area.
 - You can type directly in the text area.
 - Paste directly into the text area with `Cmd+V`.
+- Use `Load PDF` to import text from a `.pdf` file into the editor.
+- Loading a PDF replaces existing text in the editor.
 - Use `Save MP3` to export synthesized speech to `~/Downloads/kookie-<timestamp>.mp3`.
+- PDF import currently supports text-based PDFs only (no OCR for scanned/image-only pages).
 
 MP3 export shells out to `ffmpeg`; install it if you want to use `Save MP3`.
 

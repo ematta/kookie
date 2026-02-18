@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 TEXT_FOREGROUND_COLOR = (0.10, 0.12, 0.15, 1.0)
@@ -33,7 +34,9 @@ def run_kivy_ui(runtime) -> None:
         from kivy.clock import Clock
         from kivy.uix.boxlayout import BoxLayout
         from kivy.uix.button import Button
+        from kivy.uix.filechooser import FileChooserListView
         from kivy.uix.label import Label
+        from kivy.uix.popup import Popup
         from kivy.uix.textinput import TextInput
     except Exception as exc:  # pragma: no cover - depends on local GUI deps
         raise RuntimeError("Kivy is required to run the graphical application") from exc
@@ -47,12 +50,15 @@ def run_kivy_ui(runtime) -> None:
             root.add_widget(self.text_input)
 
             controls = BoxLayout(orientation="horizontal", size_hint_y=None, height=56, spacing=12)
+            load_btn = Button(text="Load PDF")
             play_btn = Button(text="Play")
             stop_btn = Button(text="Stop")
             save_btn = Button(text="Save MP3")
+            load_btn.bind(on_press=lambda *_: self._on_load_pdf())
             play_btn.bind(on_press=lambda *_: self._on_play())
             stop_btn.bind(on_press=lambda *_: self._on_stop())
             save_btn.bind(on_press=lambda *_: self._on_save())
+            controls.add_widget(load_btn)
             controls.add_widget(play_btn)
             controls.add_widget(stop_btn)
             controls.add_widget(save_btn)
@@ -74,6 +80,47 @@ def run_kivy_ui(runtime) -> None:
 
         def on_stop(self):
             runtime.stop()
+
+        def _on_load_pdf(self) -> None:
+            chooser = FileChooserListView(
+                path=str(Path.home()),
+                filters=["*.pdf"],
+                multiselect=False,
+            )
+
+            actions = BoxLayout(orientation="horizontal", size_hint_y=None, height=52, spacing=8)
+            cancel_btn = Button(text="Cancel")
+            load_btn = Button(text="Load")
+            actions.add_widget(cancel_btn)
+            actions.add_widget(load_btn)
+
+            container = BoxLayout(orientation="vertical", spacing=8, padding=8)
+            container.add_widget(chooser)
+            container.add_widget(actions)
+
+            popup = Popup(
+                title="Load PDF",
+                content=container,
+                size_hint=(0.9, 0.9),
+                auto_dismiss=False,
+            )
+            cancel_btn.bind(on_press=lambda *_: popup.dismiss())
+            load_btn.bind(on_press=lambda *_: self._confirm_pdf_selection(popup, chooser))
+            popup.open()
+
+        def _confirm_pdf_selection(self, popup: Any, chooser: Any) -> None:
+            selection = list(getattr(chooser, "selection", []))
+            if not selection:
+                runtime.status_message = "Select a PDF file to load."
+                self._sync_now()
+                return
+
+            selected_path = Path(selection[0])
+            loaded_text = runtime.load_pdf(selected_path)
+            if loaded_text is not None:
+                self.text_input.text = loaded_text
+                popup.dismiss()
+            self._sync_now()
 
         def _on_play(self) -> None:
             runtime.set_text(self.text_input.text)

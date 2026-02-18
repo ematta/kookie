@@ -14,6 +14,9 @@ def test_pyinstaller_spec_contains_required_assets_and_hooks() -> None:
         "libs/espeak-ng-data",
         "assets/kokoro-v0_19.onnx",
         "assets/voices.bin",
+        "collect_data_files",
+        "collect_dynamic_libs",
+        "pymupdf",
         "scipy.special.cython_special",
         "sklearn.utils._typedefs",
     ]
