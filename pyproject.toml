@@ -45,6 +45,10 @@ markers = [
 [tool.coverage.run]
 source = ["kookie"]
 branch = true
+omit = [
+  "kookie/ui.py",
+  "kookie/__main__.py",
+]
 
 [tool.coverage.report]
 fail_under = 80

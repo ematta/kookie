@@ -25,3 +25,12 @@ def test_pyproject_defines_coverage_thresholds() -> None:
 
     assert report["fail_under"] >= 80
     assert "kookie" in run["source"]
+
+
+def test_pyproject_omits_gui_entrypoints_from_coverage() -> None:
+    data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    run = data["tool"]["coverage"]["run"]
+    omit = run["omit"]
+
+    assert "kookie/ui.py" in omit
+    assert "kookie/__main__.py" in omit
