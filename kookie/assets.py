@@ -3,12 +3,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from dataclasses import asdict
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from pathlib import Path
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Callable
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
+from pathlib import Path
 from urllib.request import urlopen as _stdlib_urlopen
 
 from .config import AppConfig
@@ -114,12 +113,30 @@ def resolve_assets(
             (specs[0].version and manifest.model_version and specs[0].version != manifest.model_version)
             or (specs[1].version and manifest.voices_version and specs[1].version != manifest.voices_version)
         ):
-            model_path = _attempt_download(specs[0], target_dir, config.download_timeout, downloader, errors, progress_callback)
-            voices_path = _attempt_download(specs[1], target_dir, config.download_timeout, downloader, errors, progress_callback)
+            model_path = _attempt_download(
+                specs[0],
+                target_dir,
+                config.download_timeout,
+                downloader,
+                errors,
+                progress_callback,
+            )
+            voices_path = _attempt_download(
+                specs[1],
+                target_dir,
+                config.download_timeout,
+                downloader,
+                errors,
+                progress_callback,
+            )
             downloaded = downloaded or (model_path is not None or voices_path is not None)
 
     ready = model_path is not None and voices_path is not None
-    verified = bool(ready and (not specs[0].sha256 or model_path is not None) and (not specs[1].sha256 or voices_path is not None))
+    verified = bool(
+        ready
+        and (not specs[0].sha256 or model_path is not None)
+        and (not specs[1].sha256 or voices_path is not None)
+    )
 
     if ready:
         _save_manifest(
@@ -127,7 +144,7 @@ def resolve_assets(
             AssetManifest(
                 model_version=specs[0].version,
                 voices_version=specs[1].version,
-                updated_at=datetime.now(timezone.utc).isoformat(),
+                updated_at=datetime.now(UTC).isoformat(),
             ),
         )
 

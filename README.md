@@ -91,7 +91,8 @@ MP3 export shells out to `ffmpeg`; install it if you want to use `Save MP3`.
 ```bash
 scripts/build_app.sh
 scripts/sign_app.sh dist/Kookie.app "Developer ID Application: Your Name"
-scripts/notarize_app.sh dist/Kookie.app "AC_PASSWORD"
+xcrun notarytool store-credentials KOOKIE_NOTARY --apple-id "<APPLE_ID>" --team-id "<TEAM_ID>" --password "<APP_SPECIFIC_PASSWORD>"
+scripts/notarize_app.sh dist/Kookie.app KOOKIE_NOTARY
 scripts/create_dmg.sh dist/Kookie.app
 ```
 

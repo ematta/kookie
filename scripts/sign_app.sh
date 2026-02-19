@@ -16,6 +16,9 @@ if [[ ! -d "$APP_PATH" ]]; then
   exit 1
 fi
 
+# Remove quarantine metadata to avoid Gatekeeper warnings on locally-distributed builds.
+xattr -dr com.apple.quarantine "$APP_PATH" 2>/dev/null || true
+
 if [[ -d "$APP_PATH/Contents/Frameworks" ]]; then
   find "$APP_PATH/Contents/Frameworks" -type f \( -name "*.dylib" -o -perm -111 \) -print0 | while IFS= read -r -d '' file; do
     codesign --force --timestamp --sign "$SIGNING_IDENTITY" "$file"
@@ -30,4 +33,4 @@ codesign \
   --sign "$SIGNING_IDENTITY" \
   "$APP_PATH"
 
-codesign --verify --deep --strict "$APP_PATH"
+codesign --verify --deep --strict --verbose=4 "$APP_PATH"

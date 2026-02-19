@@ -2,11 +2,8 @@ from __future__ import annotations
 
 import random
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, TypeVar
-
-
-T = TypeVar("T")
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,7 +15,7 @@ class RetryPolicy:
     max_delay: float = 5.0
 
 
-def retry_call(
+def retry_call[T](
     func: Callable[[], T],
     *,
     policy: RetryPolicy | None = None,

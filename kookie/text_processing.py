@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from functools import lru_cache
 import re
-
+from functools import lru_cache
 
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
 _WHITESPACE = re.compile(r"\s+")

@@ -4,11 +4,11 @@ import re
 
 import pytest
 
-hypothesis = pytest.importorskip("hypothesis")
-from hypothesis import given
-from hypothesis import strategies as st
-
 from kookie.text_processing import normalize_text, split_sentences
+
+hypothesis = pytest.importorskip("hypothesis")
+given = hypothesis.given
+st = hypothesis.strategies
 
 
 @given(st.text(min_size=0, max_size=500))

@@ -3,7 +3,7 @@ from __future__ import annotations
 import queue
 import threading
 import time
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 
@@ -15,7 +15,7 @@ class AudioPlayer:
 
     def play_from_queue(
         self,
-        audio_queue: "queue.Queue[object]",
+        audio_queue: queue.Queue[object],
         stop_event: threading.Event,
         pause_event: threading.Event | None = None,
         volume_getter: Callable[[], float] | None = None,

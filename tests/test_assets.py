@@ -3,7 +3,7 @@ from urllib.error import URLError
 
 import pytest
 
-from kookie.assets import AssetDownloadError, AssetSpec, resolve_assets, download_asset
+from kookie.assets import AssetDownloadError, AssetSpec, download_asset, resolve_assets
 from kookie.config import AppConfig
 
 

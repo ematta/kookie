@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-
 _NON_UNIT_MARKERS = {"integration", "e2e", "perf"}
 
 

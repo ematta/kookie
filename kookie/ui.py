@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from .controller import PlaybackState
 from .editor_prefs import (
@@ -135,7 +136,7 @@ def _label_text_size_for_width(width: float) -> tuple[float, None]:
 
 def _runtime_base_path() -> Path:
     if getattr(sys, "frozen", False):
-        return Path(getattr(sys, "_MEIPASS"))  # type: ignore[arg-type]
+        return Path(sys._MEIPASS)  # type: ignore[arg-type]
     return Path(__file__).resolve().parents[1]
 
 
@@ -569,10 +570,20 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 padding=list(STATUS_BAR_PADDING),
             )
             self._paint_background(status_bar, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
-            status_header = BoxLayout(orientation="horizontal", size_hint_y=None, height=STATUS_HEADER_HEIGHT, spacing=10)
+            status_header = BoxLayout(
+                orientation="horizontal",
+                size_hint_y=None,
+                height=STATUS_HEADER_HEIGHT,
+                spacing=10,
+            )
             self.voice_status = Label(text="", size_hint_x=0.42, **_status_label_config())
             self.backend_status = Label(text="", size_hint_x=0.58, **_status_label_config())
-            self.activity_status = Label(text="", size_hint_y=None, height=STATUS_ACTIVITY_ROW_MIN_HEIGHT, **_status_label_config())
+            self.activity_status = Label(
+                text="",
+                size_hint_y=None,
+                height=STATUS_ACTIVITY_ROW_MIN_HEIGHT,
+                **_status_label_config(),
+            )
             self.progress_status = Label(
                 text="",
                 size_hint_y=None,
@@ -836,7 +847,13 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             return "Wrap: On" if word_wrap else "Wrap: Off"
 
         @staticmethod
-        def _paint_background(widget: Any, color: tuple[float, float, float, float], *, Color: Any, Rectangle: Any) -> None:
+        def _paint_background(
+            widget: Any,
+            color: tuple[float, float, float, float],
+            *,
+            Color: Any,
+            Rectangle: Any,
+        ) -> None:
             with widget.canvas.before:
                 Color(*color)
                 background_rect = Rectangle(pos=widget.pos, size=widget.size)

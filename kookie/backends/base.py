@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Iterable, Iterator, Protocol
+from collections.abc import Iterable, Iterator
+from typing import Protocol
 
 import numpy as np
 

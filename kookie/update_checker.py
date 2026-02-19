@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from urllib.request import Request, urlopen as _stdlib_urlopen
-
+from urllib.request import Request
+from urllib.request import urlopen as _stdlib_urlopen
 
 _VERSION_PATTERN = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)")
 
