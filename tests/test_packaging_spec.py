@@ -61,6 +61,15 @@ def test_pyinstaller_spec_supports_optional_model_assets() -> None:
     assert "Skipping missing asset during packaging" in contents
 
 
+def test_pyinstaller_spec_uses_project_png_icon_for_app_bundle() -> None:
+    spec_path = ROOT / "packaging" / "kookie.spec"
+    contents = spec_path.read_text(encoding="utf-8")
+
+    assert 'app_icon_rel = "kookie.png"' in contents
+    assert 'optional_data(app_icon_rel, ".")' in contents
+    assert "icon=str(project_root / app_icon_rel)" in contents
+
+
 def test_entitlements_include_required_hardened_runtime_exceptions() -> None:
     entitlements_path = ROOT / "packaging" / "entitlements.plist"
     with entitlements_path.open("rb") as fh:

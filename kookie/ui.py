@@ -32,9 +32,22 @@ STATUS_TEXT_COLOR = (0.90, 0.93, 0.98, 1.0)
 STATUS_VOICE_MAX_CHARS = 24
 STATUS_BACKEND_MAX_CHARS = 28
 STATUS_ACTIVITY_MAX_CHARS = 72
-STATUS_BAR_HEIGHT = 74
+APP_ICON_FILENAME = "kookie.png"
 STATUS_HEADER_HEIGHT = 30
 STATUS_ACTIVITY_ROW_MIN_HEIGHT = 30
+STATUS_PROGRESS_ROW_MIN_HEIGHT = 30
+STATUS_RECENT_ROW_MIN_HEIGHT = 30
+STATUS_BAR_ROW_SPACING = 4
+STATUS_BAR_PADDING = (10, 8, 10, 8)
+STATUS_BAR_VERTICAL_PADDING = STATUS_BAR_PADDING[1] + STATUS_BAR_PADDING[3]
+STATUS_BAR_HEIGHT = (
+    STATUS_HEADER_HEIGHT
+    + STATUS_ACTIVITY_ROW_MIN_HEIGHT
+    + STATUS_PROGRESS_ROW_MIN_HEIGHT
+    + STATUS_RECENT_ROW_MIN_HEIGHT
+    + (STATUS_BAR_ROW_SPACING * 3)
+    + STATUS_BAR_VERTICAL_PADDING
+)
 NATIVE_OPEN_FILE_TYPES = (("PDF files", "*.pdf"), ("All files", "*.*"))
 NATIVE_SAVE_FILE_TYPES = (("MP3 files", "*.mp3"), ("All files", "*.*"))
 
@@ -118,6 +131,20 @@ def _status_label_config() -> dict[str, object]:
 
 def _label_text_size_for_width(width: float) -> tuple[float, None]:
     return (max(0.0, width), None)
+
+
+def _runtime_base_path() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS"))  # type: ignore[arg-type]
+    return Path(__file__).resolve().parents[1]
+
+
+def _app_icon_path(*, runtime_base: Path | None = None) -> str | None:
+    base = runtime_base if runtime_base is not None else _runtime_base_path()
+    icon_path = base / APP_ICON_FILENAME
+    if icon_path.exists():
+        return str(icon_path)
+    return None
 
 
 def _control_style(*, background_color: tuple[float, float, float, float]) -> dict[str, object]:
@@ -403,6 +430,9 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
         def __init__(self, **kwargs: Any):
             super().__init__(**kwargs)
             self.startup_action: str | None = None
+            icon_path = _app_icon_path()
+            if icon_path is not None:
+                self.icon = icon_path
 
         def build(self):
             if startup_prompt is not None:
@@ -534,17 +564,27 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             status_bar = BoxLayout(
                 orientation="vertical",
                 size_hint_y=None,
-                height=max(102, STATUS_BAR_HEIGHT),
-                spacing=4,
-                padding=[10, 8, 10, 8],
+                height=STATUS_BAR_HEIGHT,
+                spacing=STATUS_BAR_ROW_SPACING,
+                padding=list(STATUS_BAR_PADDING),
             )
             self._paint_background(status_bar, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
             status_header = BoxLayout(orientation="horizontal", size_hint_y=None, height=STATUS_HEADER_HEIGHT, spacing=10)
             self.voice_status = Label(text="", size_hint_x=0.42, **_status_label_config())
             self.backend_status = Label(text="", size_hint_x=0.58, **_status_label_config())
             self.activity_status = Label(text="", size_hint_y=None, height=STATUS_ACTIVITY_ROW_MIN_HEIGHT, **_status_label_config())
-            self.progress_status = Label(text="", size_hint_y=None, height=22, **_status_label_config())
-            self.recent_status = Label(text="", size_hint_y=None, height=22, **_status_label_config())
+            self.progress_status = Label(
+                text="",
+                size_hint_y=None,
+                height=STATUS_PROGRESS_ROW_MIN_HEIGHT,
+                **_status_label_config(),
+            )
+            self.recent_status = Label(
+                text="",
+                size_hint_y=None,
+                height=STATUS_RECENT_ROW_MIN_HEIGHT,
+                **_status_label_config(),
+            )
             self._bind_label_text_size(self.voice_status)
             self._bind_label_text_size(self.backend_status)
             self._bind_label_text_size(self.activity_status)
