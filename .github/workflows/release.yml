@@ -16,6 +16,8 @@ jobs:
         run: uv sync --extra dev
       - name: Run tests
         run: uv run pytest -q
+        env:
+          PYTHONPATH: ${{ github.workspace }}
       - name: Build app bundle
         run: scripts/build_app.sh
       - name: Build dmg
