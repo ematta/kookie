@@ -65,6 +65,8 @@ def _scroll_view_config(word_wrap: bool) -> dict[str, object]:
         "scroll_type": ["bars", "content"],
         "bar_width": 12,
         "bar_pos_y": "right",
+        "scroll_wheel_distance": "12sp",
+        "smooth_scroll_end": 10,
         "do_scroll_y": True,
         "do_scroll_x": not word_wrap,
     }

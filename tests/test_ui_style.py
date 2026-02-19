@@ -36,6 +36,12 @@ def test_scroll_view_config_enables_horizontal_scroll_when_wrap_disabled() -> No
     assert cfg["do_scroll_x"] is True
 
 
+def test_scroll_view_config_enables_smoother_mouse_wheel_motion() -> None:
+    cfg = _scroll_view_config(word_wrap=True)
+    assert cfg["scroll_wheel_distance"] == "12sp"
+    assert cfg["smooth_scroll_end"] == 10
+
+
 def test_save_spinner_text_cycles_frames() -> None:
     assert _save_spinner_text(is_saving=True, tick=0) == "Saving MP3 |"
     assert _save_spinner_text(is_saving=True, tick=1) == "Saving MP3 /"
