@@ -24,5 +24,9 @@ jobs:
         run: uv sync --extra dev
       - name: Run tests
         run: uv run pytest -q
+        env:
+          PYTHONPATH: ${{ github.workspace }}
       - name: Run coverage gate
         run: uv run pytest -q --cov=kookie --cov-report=term-missing --cov-report=xml
+        env:
+          PYTHONPATH: ${{ github.workspace }}
