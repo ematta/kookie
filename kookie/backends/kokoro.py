@@ -16,12 +16,47 @@ class KokoroSpeechBackend:
         self.voices_path = Path(voices_path)
         self._configure_espeak_env()
         self._engine = self._create_engine()
+        self._voice_cache: list[str] | None = None
 
-    def synthesize_sentences(self, sentences: Iterable[str], voice: str) -> Iterator[np.ndarray]:
+    def synthesize_sentences(self, sentences: Iterable[str], voice: str, speed: float = 1.0) -> Iterator[np.ndarray]:
+        self.validate_voice(voice)
+        bounded_speed = min(2.0, max(0.5, float(speed)))
         for sentence in sentences:
-            result = self._engine.create(sentence, voice=voice, speed=1.0, lang="en-us")
+            result = self._engine.create(sentence, voice=voice, speed=bounded_speed, lang="en-us")
             audio = _extract_audio(result)
             yield np.asarray(audio, dtype=np.float32).reshape(-1)
+
+    def list_voices(self) -> list[str]:
+        if self._voice_cache is not None:
+            return list(self._voice_cache)
+
+        values = getattr(self._engine, "voices", None)
+        voices: list[str] = []
+        if isinstance(values, dict):
+            voices = [str(item).strip() for item in values.keys() if str(item).strip()]
+        elif isinstance(values, (list, tuple, set)):
+            voices = [str(item).strip() for item in values if str(item).strip()]
+
+        if not voices:
+            voices = ["af_sarah"]
+        self._voice_cache = sorted(set(voices))
+        return list(self._voice_cache)
+
+    def validate_voice(self, voice: str) -> None:
+        selected = voice.strip()
+        if not selected:
+            raise ValueError("Voice name is required.")
+        voices = self.list_voices()
+        if selected not in voices:
+            raise ValueError(f"Unknown voice: {selected}")
+
+    def health_check(self) -> dict[str, object]:
+        return {
+            "backend": self.name,
+            "model_path": str(self.model_path),
+            "voices_path": str(self.voices_path),
+            "voice_count": len(self.list_voices()),
+        }
 
     def _create_engine(self):
         from kokoro_onnx import Kokoro  # type: ignore

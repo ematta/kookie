@@ -26,6 +26,7 @@ def test_preload_assets_skips_download_when_model_and_voice_exist(tmp_path: Path
     assert result.model_path == existing_model
     assert result.voices_path == existing_voice
     assert result.downloaded is False
+    assert "already available" in result.message.lower()
 
 
 def test_preload_assets_downloads_missing_model_and_voice(tmp_path: Path) -> None:
@@ -47,6 +48,7 @@ def test_preload_assets_downloads_missing_model_and_voice(tmp_path: Path) -> Non
     assert result.model_path == tmp_path / cfg.model_filename
     assert result.voices_path == tmp_path / cfg.voices_filename
     assert result.downloaded is True
+    assert "downloaded" in result.message.lower()
 
 
 def test_preload_assets_reports_partial_download_failure(tmp_path: Path) -> None:

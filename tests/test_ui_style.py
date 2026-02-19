@@ -2,13 +2,20 @@ from kookie.ui import (
     STATUS_ACTIVITY_ROW_MIN_HEIGHT,
     STATUS_ACTIVITY_MAX_CHARS,
     STATUS_BAR_HEIGHT,
+    STATUS_BAR_PADDING,
+    STATUS_BAR_ROW_SPACING,
     STATUS_HEADER_HEIGHT,
+    STATUS_PROGRESS_ROW_MIN_HEIGHT,
+    STATUS_RECENT_ROW_MIN_HEIGHT,
     TEXT_FOREGROUND_COLOR,
     _label_text_size_for_width,
+    _app_icon_path,
     _save_spinner_text,
     _scroll_view_config,
     _status_display_items,
     _status_label_config,
+    _update_recent_files,
+    detect_system_dark_mode,
 )
 
 
@@ -81,11 +88,52 @@ def test_status_label_config_uses_single_line_shortening() -> None:
     assert cfg["max_lines"] == 1
 
 
-def test_status_layout_reserves_enough_vertical_space_for_two_rows() -> None:
+def test_status_layout_reserves_enough_vertical_space_for_all_rows() -> None:
+    status_vertical_padding = STATUS_BAR_PADDING[1] + STATUS_BAR_PADDING[3]
+
+    minimum_content_height = (
+        STATUS_HEADER_HEIGHT
+        + STATUS_ACTIVITY_ROW_MIN_HEIGHT
+        + STATUS_PROGRESS_ROW_MIN_HEIGHT
+        + STATUS_RECENT_ROW_MIN_HEIGHT
+        + (STATUS_BAR_ROW_SPACING * 3)
+        + status_vertical_padding
+    )
+
     assert STATUS_HEADER_HEIGHT >= 24
     assert STATUS_ACTIVITY_ROW_MIN_HEIGHT >= 24
-    assert STATUS_BAR_HEIGHT >= STATUS_HEADER_HEIGHT + STATUS_ACTIVITY_ROW_MIN_HEIGHT
+    assert STATUS_BAR_HEIGHT >= minimum_content_height
 
 
 def test_label_text_size_tracks_width_without_forcing_height() -> None:
     assert _label_text_size_for_width(320) == (320, None)
+
+
+def test_update_recent_files_deduplicates_and_caps_list() -> None:
+    files = ["/tmp/a.pdf", "/tmp/b.pdf", "/tmp/c.pdf"]
+    updated = _update_recent_files(files, "/tmp/b.pdf", max_items=3)
+
+    assert updated == ["/tmp/b.pdf", "/tmp/a.pdf", "/tmp/c.pdf"]
+
+    updated = _update_recent_files(updated, "/tmp/d.pdf", max_items=3)
+    assert updated == ["/tmp/d.pdf", "/tmp/b.pdf", "/tmp/a.pdf"]
+
+
+def test_detect_system_dark_mode_parses_apple_script_output() -> None:
+    def _runner(*_args, **_kwargs):
+        class _Completed:
+            stdout = "true\n"
+        return _Completed()
+
+    assert detect_system_dark_mode(platform_name="darwin", runner=_runner) is True
+
+
+def test_app_icon_path_returns_png_path_when_present(tmp_path) -> None:
+    icon_path = tmp_path / "kookie.png"
+    icon_path.write_bytes(b"png")
+
+    assert _app_icon_path(runtime_base=tmp_path) == str(icon_path)
+
+
+def test_app_icon_path_returns_none_when_png_missing(tmp_path) -> None:
+    assert _app_icon_path(runtime_base=tmp_path) is None

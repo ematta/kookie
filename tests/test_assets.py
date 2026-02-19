@@ -1,4 +1,5 @@
 import io
+from urllib.error import URLError
 
 import pytest
 
@@ -71,3 +72,85 @@ def test_download_asset_cleans_temp_file_on_checksum_failure(tmp_path) -> None:
 
     assert not (tmp_path / "model.onnx").exists()
     assert not (tmp_path / "model.onnx.tmp").exists()
+
+
+def test_download_asset_retries_transient_network_error(tmp_path) -> None:
+    spec = AssetSpec(
+        name="model",
+        filename="model.onnx",
+        url="https://example.test/model.onnx",
+        sha256=None,
+    )
+    attempts = {"count": 0}
+
+    def fake_urlopen(url: str, timeout: float):
+        assert url == spec.url
+        assert timeout == 2.0
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise URLError("offline")
+        return _BytesResponse(b"model-bytes")
+
+    saved = download_asset(spec, target_dir=tmp_path, timeout=2.0, urlopen=fake_urlopen)
+
+    assert saved == tmp_path / "model.onnx"
+    assert saved.read_bytes() == b"model-bytes"
+    assert attempts["count"] == 3
+
+
+def test_download_asset_reports_progress(tmp_path) -> None:
+    spec = AssetSpec(
+        name="model",
+        filename="model.onnx",
+        url="https://example.test/model.onnx",
+        sha256=None,
+    )
+    events: list[tuple[int, int | None]] = []
+
+    class _Response(_BytesResponse):
+        def __init__(self):
+            super().__init__(b"abcdefghij")
+            self.headers = {"Content-Length": "10"}
+
+    def fake_urlopen(url: str, timeout: float):
+        assert url == spec.url
+        assert timeout == 2.0
+        return _Response()
+
+    saved = download_asset(
+        spec,
+        target_dir=tmp_path,
+        timeout=2.0,
+        urlopen=fake_urlopen,
+        progress_callback=lambda downloaded, total: events.append((downloaded, total)),
+    )
+
+    assert saved.read_bytes() == b"abcdefghij"
+    assert events[-1] == (10, 10)
+
+
+def test_resolve_assets_writes_manifest_when_ready(tmp_path) -> None:
+    cfg = AppConfig(asset_dir=tmp_path)
+    (tmp_path / cfg.model_filename).write_bytes(b"model")
+    (tmp_path / cfg.voices_filename).write_bytes(b"voices")
+
+    resolved = resolve_assets(cfg, ensure_download=False)
+
+    assert resolved.ready is True
+    assert resolved.manifest_path is not None
+    assert resolved.manifest_path.exists()
+    assert "model_version" in resolved.manifest_path.read_text(encoding="utf-8")
+
+
+def test_resolve_assets_can_require_checksums(tmp_path) -> None:
+    cfg = AppConfig(
+        asset_dir=tmp_path,
+        require_asset_checksums=True,
+        model_sha256=None,
+        voices_sha256=None,
+    )
+
+    resolved = resolve_assets(cfg, ensure_download=False)
+
+    assert resolved.ready is False
+    assert any("checksum is required" in message for message in resolved.errors)

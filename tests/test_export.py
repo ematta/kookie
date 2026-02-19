@@ -3,7 +3,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from kookie.export import _resolve_ffmpeg_executable, encode_mp3, save_speech_to_mp3
+from kookie.errors import KookieError
+from kookie.export import _resolve_ffmpeg_executable, encode_mp3, save_speech_to_audio, save_speech_to_mp3
 
 
 class _Backend:
@@ -63,7 +64,7 @@ def test_encode_mp3_raises_when_ffmpeg_is_missing(tmp_path: Path) -> None:
     def _runner(*_, **__):
         raise FileNotFoundError("ffmpeg")
 
-    with pytest.raises(RuntimeError, match="ffmpeg is required"):
+    with pytest.raises(KookieError, match="ffmpeg is required"):
         encode_mp3(
             audio=np.array([0.1], dtype=np.float32),
             sample_rate=24_000,
@@ -80,7 +81,7 @@ def test_encode_mp3_raises_when_ffmpeg_fails(tmp_path: Path) -> None:
     def _runner(*_, **__):
         return _CompletedProcess()
 
-    with pytest.raises(RuntimeError, match="encode failed"):
+    with pytest.raises(KookieError, match="encode failed"):
         encode_mp3(
             audio=np.array([0.1], dtype=np.float32),
             sample_rate=24_000,
@@ -136,3 +137,48 @@ def test_encode_mp3_uses_resolved_ffmpeg_executable(tmp_path: Path, monkeypatch)
     command = capture["command"]
     assert isinstance(command, list)
     assert command[0] == "/tmp/bundled/ffmpeg"
+
+
+def test_encode_mp3_honors_quality_setting(tmp_path: Path) -> None:
+    capture: dict[str, object] = {}
+
+    class _CompletedProcess:
+        returncode = 0
+        stderr = b""
+
+    def _runner(command, **kwargs):
+        capture["command"] = command
+        capture["kwargs"] = kwargs
+        return _CompletedProcess()
+
+    encode_mp3(
+        audio=np.array([0.1, 0.2], dtype=np.float32),
+        sample_rate=24_000,
+        output_path=tmp_path / "speech.mp3",
+        quality=4,
+        runner=_runner,
+    )
+
+    command = capture["command"]
+    assert "-q:a" in command
+    idx = command.index("-q:a")
+    assert command[idx + 1] == "4"
+
+
+def test_save_speech_to_audio_supports_wav_export(tmp_path: Path) -> None:
+    backend = _Backend()
+    output_path = tmp_path / "speech.wav"
+
+    saved_path = save_speech_to_audio(
+        backend=backend,
+        text="one. two.",
+        voice="af_sarah",
+        sample_rate=24_000,
+        output_path=output_path,
+        format="wav",
+        chunker=lambda _: ["one", "two"],
+    )
+
+    assert saved_path == output_path
+    assert output_path.exists()
+    assert output_path.read_bytes().startswith(b"RIFF")

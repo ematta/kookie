@@ -52,4 +52,5 @@ def test_load_pdf_keeps_existing_text_on_failure(tmp_path: Path) -> None:
 
     assert loaded is None
     assert runtime.text == original
-    assert runtime.status_message == "Unable to load PDF: invalid or encrypted PDF"
+    assert runtime.status_message.startswith("Unable to load PDF:")
+    assert "invalid or encrypted PDF" in runtime.status_message

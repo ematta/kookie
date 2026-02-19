@@ -2,19 +2,32 @@ from __future__ import annotations
 
 import queue
 import threading
+from importlib.metadata import PackageNotFoundError, version as package_version
 from datetime import datetime
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Callable
+from typing import Callable, TypedDict
 
 from .assets import ResolvedAssets, resolve_assets
 from .audio import AudioPlayer
 from .backends import BackendSelectionError, select_backend
 from .config import AppConfig, load_config
 from .controller import ControllerEvent, PlaybackController
+from .errors import classify_exception, to_user_message
 from .export import save_speech_to_mp3
+from .monitoring import HealthStatus, MetricsStore, start_health_server
 from .pdf_import import extract_pdf_text
+from .preload import preload_assets
+from .telemetry import LocalTelemetry
 from .text_processing import normalize_text
+from .update_checker import UpdateInfo, check_for_update
+
+
+class StartupPrompt(TypedDict):
+    title: str
+    message: str
+    can_retry: bool
+    actions: tuple[str, ...]
 
 
 @dataclass(slots=True)
@@ -27,6 +40,7 @@ class AppRuntime:
     status_message: str = "Ready"
     voice_status: str = "Voice: Missing"
     backend_status: str = "Backend: Unknown"
+    selected_voice: str = "af_sarah"
     _mp3_save_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
     _mp3_save_thread: threading.Thread | None = field(default=None, init=False, repr=False)
     _mp3_save_results: "queue.Queue[tuple[Path | None, Exception | None]]" = field(
@@ -35,6 +49,9 @@ class AppRuntime:
         repr=False,
     )
     _is_saving_mp3: bool = field(default=False, init=False, repr=False)
+    telemetry: LocalTelemetry | None = field(default=None, repr=False)
+    metrics: MetricsStore = field(default_factory=MetricsStore, repr=False)
+    _health_server: object | None = field(default=None, init=False, repr=False)
 
     @property
     def status_bar_items(self) -> list[str]:
@@ -54,15 +71,28 @@ class AppRuntime:
     def play(self) -> bool:
         if not self.text:
             self.status_message = "Enter text in the text area."
+            self.metrics.increment("play_rejected_empty_text")
             return False
 
-        started = self.controller.start(self.text, voice=self.config.default_voice)
+        started = self.controller.start(self.text, voice=self.selected_voice)
         if not started:
             self.status_message = "Playback is already running."
+            self.metrics.increment("play_rejected")
+            if self.telemetry is not None:
+                self.telemetry.record("play_rejected", {"reason": "already_running"})
+            return False
+        self.metrics.increment("play_started")
+        if self.telemetry is not None:
+            self.telemetry.record("play_started", {"voice": self.selected_voice, "text_len": len(self.text)})
         return started
 
     def stop(self) -> bool:
-        return self.controller.stop()
+        stopped = self.controller.stop()
+        if stopped:
+            self.metrics.increment("play_stopped")
+        if self.telemetry is not None:
+            self.telemetry.record("play_stopped", {"stopped": stopped})
+        return stopped
 
     def save_mp3(self, output_path: Path | None = None) -> Path | None:
         if not self.text:
@@ -74,15 +104,22 @@ class AppRuntime:
             saved_path = save_speech_to_mp3(
                 backend=self.backend,
                 text=self.text,
-                voice=self.config.default_voice,
+                voice=self.selected_voice,
                 sample_rate=self.config.sample_rate,
                 output_path=selected_output,
             )
         except Exception as exc:
-            self.status_message = f"Unable to save MP3: {exc}"
+            error = classify_exception(exc)
+            self.status_message = f"Unable to save MP3: {to_user_message(error)}"
+            self.metrics.increment("save_mp3_failed")
+            if self.telemetry is not None:
+                self.telemetry.record("save_mp3_failed", {"error_code": error.code.value, "category": error.category.value})
             return None
 
         self.status_message = f"Saved MP3: {saved_path}"
+        self.metrics.increment("save_mp3_completed")
+        if self.telemetry is not None:
+            self.telemetry.record("save_mp3_completed", {"path": str(saved_path)})
         return saved_path
 
     @property
@@ -110,7 +147,7 @@ class AppRuntime:
                 kwargs={
                     "backend": self.backend,
                     "text": self.text,
-                    "voice": self.config.default_voice,
+                    "voice": self.selected_voice,
                     "sample_rate": self.config.sample_rate,
                     "output_path": selected_output,
                 },
@@ -140,11 +177,19 @@ class AppRuntime:
             self._mp3_save_thread = None
 
         if error is not None:
-            self.status_message = f"Unable to save MP3: {error}"
+            categorized = classify_exception(error)
+            self.status_message = f"Unable to save MP3: {to_user_message(categorized)}"
+            self.metrics.increment("save_mp3_failed")
+            if self.telemetry is not None:
+                self.telemetry.record(
+                    "save_mp3_failed",
+                    {"error_code": categorized.code.value, "category": categorized.category.value},
+                )
             return
 
         if saved_path is not None:
             self.status_message = f"Saved MP3: {saved_path}"
+            self.metrics.increment("save_mp3_completed")
             return
 
         self.status_message = "Unable to save MP3: Unknown save failure"
@@ -158,15 +203,91 @@ class AppRuntime:
         try:
             text = loader(pdf_path)
         except Exception as exc:
-            self.status_message = f"Unable to load PDF: {exc}"
+            error = classify_exception(exc)
+            self.status_message = f"Unable to load PDF: {to_user_message(error)}"
+            self.metrics.increment("pdf_load_failed")
+            if self.telemetry is not None:
+                self.telemetry.record("pdf_load_failed", {"error_code": error.code.value, "category": error.category.value})
             return None
 
         self.set_text(text)
         self.status_message = f"Loaded PDF: {pdf_path.name}"
+        self.metrics.increment("pdf_loaded")
+        if self.telemetry is not None:
+            self.telemetry.record("pdf_loaded", {"path": str(pdf_path), "text_len": len(self.text)})
         return text
 
     def wait_until_idle(self, timeout: float = 5.0) -> None:
         self.controller.wait_until_idle(timeout=timeout)
+
+    def pause(self) -> bool:
+        return self.controller.pause()
+
+    def resume(self) -> bool:
+        return self.controller.resume()
+
+    def seek(self, *, seconds: float) -> bool:
+        return self.controller.seek(seconds=seconds)
+
+    def set_volume(self, value: float) -> float:
+        return self.controller.set_volume(value)
+
+    def set_playback_speed(self, value: float) -> float:
+        return self.controller.set_playback_speed(value)
+
+    @property
+    def playback_progress(self) -> dict[str, int]:
+        return self.controller.progress
+
+    def set_voice(self, voice: str) -> str:
+        selected = voice.strip() if isinstance(voice, str) else ""
+        if not selected:
+            selected = self.config.default_voice
+        self.selected_voice = selected
+        return self.selected_voice
+
+    def available_voices(self) -> list[str]:
+        provider = getattr(self.backend, "list_voices", None)
+        if callable(provider):
+            try:
+                values = provider()
+            except Exception:
+                values = []
+            voices = [str(item).strip() for item in values if str(item).strip()]
+            if voices:
+                return voices
+        return [self.config.default_voice]
+
+    def check_for_updates(
+        self,
+        *,
+        checker: Callable[..., UpdateInfo | None] = check_for_update,
+    ) -> UpdateInfo | None:
+        if not getattr(self.config, "update_check_enabled", True):
+            return None
+
+        info = checker(
+            current_version=_current_app_version(),
+            repo=self.config.update_repo,
+        )
+        if info is None:
+            return None
+
+        self.status_message = f"Update available: {info.version} ({info.url})"
+        if self.telemetry is not None:
+            self.telemetry.record("update_available", {"version": info.version, "url": info.url})
+        return info
+
+    def health_status(self) -> HealthStatus:
+        return HealthStatus(
+            status="ok" if self.assets.ready else "degraded",
+            backend=self.backend_name,
+            assets_ready=self.assets.ready,
+            details={
+                "state": self.controller.state.value,
+                "metrics": self.metrics.snapshot(),
+            },
+        )
 
     @property
     def backend_name(self) -> str:
@@ -174,7 +295,11 @@ class AppRuntime:
 
     def on_controller_event(self, event: ControllerEvent) -> None:
         if event.kind == "error":
-            self.status_message = f"Speech generation failed: {event.message}"
+            error = classify_exception(RuntimeError(event.message))
+            self.status_message = f"Speech generation failed: {to_user_message(error)}"
+            self.metrics.increment("playback_error")
+            if self.telemetry is not None:
+                self.telemetry.record("playback_error", {"error_code": error.code.value, "category": error.category.value})
             return
 
         if event.state.value == "idle":
@@ -256,16 +381,51 @@ def create_app(
         status_message=_initial_status_message(assets=assets, backend_name=getattr(backend, "name", "unknown")),
         voice_status=_voice_status(assets=assets),
         backend_status=_backend_status(backend_name=getattr(backend, "name", "unknown")),
+        selected_voice=cfg.default_voice,
+        telemetry=LocalTelemetry(
+            enabled=bool(getattr(cfg, "telemetry_enabled", False)),
+            output_path=Path(getattr(cfg, "telemetry_file", cfg.asset_dir / "telemetry.jsonl")).expanduser(),
+        ),
     )
     runtime_holder["runtime"] = runtime
+    if getattr(cfg, "health_check_enabled", False):
+        runtime._health_server = start_health_server(
+            host=cfg.health_check_host,
+            port=cfg.health_check_port,
+            health_provider=runtime.health_status,
+            metrics_store=runtime.metrics,
+        )
     return runtime
 
 
 def run() -> None:
-    runtime = create_app(ensure_download=True)
     from .ui import run_kivy_ui
 
-    run_kivy_ui(runtime)
+    config = load_config()
+    while True:
+        preload_result = preload_assets(config)
+
+        startup_prompt: StartupPrompt | None = None
+        runtime_config = config
+        if not preload_result.ready:
+            runtime_config = replace(config, backend_mode="mock")
+            startup_prompt = {
+                "title": "Assets unavailable",
+                "message": preload_result.message,
+                "can_retry": True,
+                "actions": ("continue_mock", "retry", "quit"),
+            }
+
+        runtime = create_app(runtime_config, ensure_download=False)
+        action = run_kivy_ui(runtime, startup_prompt=startup_prompt)
+
+        if startup_prompt is None:
+            return
+
+        if action == "retry":
+            continue
+
+        return
 
 
 def _initial_status_message(assets: ResolvedAssets, backend_name: str) -> str:
@@ -289,3 +449,10 @@ def _backend_status(backend_name: str) -> str:
 def _default_mp3_output_path() -> Path:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     return Path.home() / "Downloads" / f"kookie-{stamp}.mp3"
+
+
+def _current_app_version() -> str:
+    try:
+        return package_version("kookie")
+    except PackageNotFoundError:
+        return "0.1.0"
