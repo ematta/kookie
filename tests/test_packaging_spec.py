@@ -5,6 +5,13 @@ import plistlib
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_pyinstaller_spec_is_explicitly_tracked() -> None:
+    gitignore_path = ROOT / ".gitignore"
+    gitignore_contents = gitignore_path.read_text(encoding="utf-8")
+
+    assert "!packaging/kookie.spec" in gitignore_contents
+
+
 def test_pyinstaller_spec_contains_required_assets_and_hooks() -> None:
     spec_path = ROOT / "packaging" / "kookie.spec"
     contents = spec_path.read_text(encoding="utf-8")
