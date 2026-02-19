@@ -27,5 +27,12 @@ def test_release_workflow_supports_sign_and_notarize() -> None:
     assert "Prepare signing keychain" in workflow
     assert "scripts/sign_app.sh dist/Kookie.app" in workflow
     assert "scripts/notarize_app.sh dist/Kookie.app" in workflow
-    assert "if: ${{ secrets.MACOS_CERTIFICATE_P12 != ''" in workflow
-    assert "if: ${{ secrets.APPLE_ID != ''" in workflow
+    assert "MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}" in workflow
+    assert "MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}" in workflow
+    assert "MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}" in workflow
+    assert "APPLE_ID: ${{ secrets.APPLE_ID }}" in workflow
+    assert "APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}" in workflow
+    assert "APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}" in workflow
+    assert "if: ${{ env.MACOS_CERTIFICATE_P12 != ''" in workflow
+    assert "if: ${{ env.APPLE_ID != ''" in workflow
+    assert "if: ${{ secrets." not in workflow
