@@ -20,6 +20,38 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
       - name: Build app bundle
         run: scripts/build_app.sh
+      - name: Prepare signing keychain
+        if: ${{ secrets.MACOS_CERTIFICATE_P12 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_SIGNING_IDENTITY != '' }}
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "$MACOS_CERTIFICATE_P12" | base64 --decode > /tmp/kookie-signing-cert.p12
+          security create-keychain -p "" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import /tmp/kookie-signing-cert.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -s build.keychain
+          security default-keychain -s build.keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
+          rm -f /tmp/kookie-signing-cert.p12
+      - name: Sign app bundle
+        if: ${{ secrets.MACOS_CERTIFICATE_P12 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_SIGNING_IDENTITY != '' }}
+        run: scripts/sign_app.sh dist/Kookie.app "${{ secrets.MACOS_SIGNING_IDENTITY }}"
+      - name: Store notarization credentials
+        if: ${{ secrets.APPLE_ID != '' && secrets.APPLE_APP_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && secrets.MACOS_CERTIFICATE_P12 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_SIGNING_IDENTITY != '' }}
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool store-credentials KOOKIE_NOTARY \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD"
+      - name: Notarize app bundle
+        if: ${{ secrets.APPLE_ID != '' && secrets.APPLE_APP_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && secrets.MACOS_CERTIFICATE_P12 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_SIGNING_IDENTITY != '' }}
+        run: scripts/notarize_app.sh dist/Kookie.app KOOKIE_NOTARY
       - name: Build dmg
         run: scripts/create_dmg.sh dist/Kookie.app
       - name: Upload artifacts

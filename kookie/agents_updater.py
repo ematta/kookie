@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import re
 import tomllib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 AUTO_START = "<!-- BEGIN AUTO -->"
@@ -32,11 +32,11 @@ Only edit content outside the auto-generated section markers.
 
 
 def _normalize_timestamp(generated_at: datetime | None) -> str:
-    stamp = generated_at or datetime.now(timezone.utc)
+    stamp = generated_at or datetime.now(UTC)
     if stamp.tzinfo is None:
-        stamp = stamp.replace(tzinfo=timezone.utc)
+        stamp = stamp.replace(tzinfo=UTC)
     else:
-        stamp = stamp.astimezone(timezone.utc)
+        stamp = stamp.astimezone(UTC)
     return stamp.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 

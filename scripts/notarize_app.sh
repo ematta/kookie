@@ -9,7 +9,8 @@ fi
 APP_PATH="$1"
 KEYCHAIN_PROFILE="$2"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ZIP_PATH="$ROOT_DIR/dist/Kookie.zip"
+APP_BASENAME="$(basename "$APP_PATH" .app)"
+ZIP_PATH="$ROOT_DIR/dist/$APP_BASENAME.zip"
 
 if [[ ! -d "$APP_PATH" ]]; then
   echo "App bundle not found: $APP_PATH"
@@ -23,3 +24,5 @@ ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
 
 xcrun notarytool submit "$ZIP_PATH" --keychain-profile "$KEYCHAIN_PROFILE" --wait
 xcrun stapler staple "$APP_PATH"
+xcrun stapler validate "$APP_PATH"
+spctl --assess --type execute --verbose=4 "$APP_PATH"

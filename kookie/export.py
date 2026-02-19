@@ -5,9 +5,8 @@ import shutil
 import subprocess
 import sys
 import wave
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 
@@ -194,5 +193,5 @@ def _resolve_ffmpeg_executable(
 
 def _runtime_base_path() -> Path:
     if getattr(sys, "frozen", False):
-        return Path(getattr(sys, "_MEIPASS"))  # type: ignore[arg-type]
+        return Path(sys._MEIPASS)  # type: ignore[arg-type]
     return Path(__file__).resolve().parents[1]

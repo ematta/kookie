@@ -1,6 +1,6 @@
 from kookie.ui import (
-    STATUS_ACTIVITY_ROW_MIN_HEIGHT,
     STATUS_ACTIVITY_MAX_CHARS,
+    STATUS_ACTIVITY_ROW_MIN_HEIGHT,
     STATUS_BAR_HEIGHT,
     STATUS_BAR_PADDING,
     STATUS_BAR_ROW_SPACING,
@@ -8,8 +8,8 @@ from kookie.ui import (
     STATUS_PROGRESS_ROW_MIN_HEIGHT,
     STATUS_RECENT_ROW_MIN_HEIGHT,
     TEXT_FOREGROUND_COLOR,
-    _label_text_size_for_width,
     _app_icon_path,
+    _label_text_size_for_width,
     _save_spinner_text,
     _scroll_view_config,
     _status_display_items,

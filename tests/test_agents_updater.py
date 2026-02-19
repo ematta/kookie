@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from kookie.agents_updater import AUTO_END, AUTO_START, generate_auto_block, refresh_agents_file
@@ -34,7 +34,7 @@ def test_generate_auto_block_includes_project_snapshot(tmp_path: Path) -> None:
     block = generate_auto_block(
         pyproject_path=pyproject_path,
         repo_root=tmp_path,
-        generated_at=datetime(2026, 2, 17, 15, 30, tzinfo=timezone.utc),
+        generated_at=datetime(2026, 2, 17, 15, 30, tzinfo=UTC),
     )
 
     assert AUTO_START in block
@@ -75,7 +75,7 @@ Manual outro.
         agents_path=agents_path,
         pyproject_path=pyproject_path,
         repo_root=tmp_path,
-        generated_at=datetime(2026, 2, 17, 15, 30, tzinfo=timezone.utc),
+        generated_at=datetime(2026, 2, 17, 15, 30, tzinfo=UTC),
     )
 
     updated = agents_path.read_text(encoding="utf-8")
@@ -96,7 +96,7 @@ def test_refresh_agents_file_creates_new_file_with_template(tmp_path: Path) -> N
         agents_path=agents_path,
         pyproject_path=pyproject_path,
         repo_root=tmp_path,
-        generated_at=datetime(2026, 2, 17, 15, 30, tzinfo=timezone.utc),
+        generated_at=datetime(2026, 2, 17, 15, 30, tzinfo=UTC),
     )
 
     created = agents_path.read_text(encoding="utf-8")

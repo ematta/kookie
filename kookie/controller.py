@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from concurrent.futures import Future, ThreadPoolExecutor
 import queue
 import threading
 import time
+from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable
 
 import numpy as np
 

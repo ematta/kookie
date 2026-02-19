@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import Iterable, Iterator
 
 import numpy as np
 
@@ -82,7 +82,7 @@ class KokoroSpeechBackend:
 
 def _runtime_base_path() -> Path:
     if getattr(sys, "frozen", False):
-        return Path(getattr(sys, "_MEIPASS"))  # type: ignore[arg-type]
+        return Path(sys._MEIPASS)  # type: ignore[arg-type]
     return Path(__file__).resolve().parents[2]
 
 

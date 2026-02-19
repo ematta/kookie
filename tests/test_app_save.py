@@ -1,5 +1,5 @@
-from pathlib import Path
 import time
+from pathlib import Path
 from threading import Event
 
 from kookie.app import create_app

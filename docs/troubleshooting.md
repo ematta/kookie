@@ -19,3 +19,17 @@
 
 - Symptom: `No extractable text found in PDF`.
 - Fix: enable OCR fallback or use a text-based PDF.
+
+## macOS says app cannot be verified
+
+- Symptom: `Apple could not verify "Kookie" is free of malware...`.
+- Cause: unsigned or unstapled app bundle distributed with quarantine metadata.
+- Fix: for local testing, clear quarantine metadata:
+
+```bash
+xattr -dr com.apple.quarantine /path/to/Kookie.app
+```
+
+- Release fix: sign and notarize before distribution:
+  - `scripts/sign_app.sh dist/Kookie.app "Developer ID Application: ..."`
+  - `scripts/notarize_app.sh dist/Kookie.app <NOTARY_KEYCHAIN_PROFILE>`

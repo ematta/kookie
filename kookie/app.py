@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import queue
 import threading
-from importlib.metadata import PackageNotFoundError, version as package_version
-from datetime import datetime
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
+from datetime import datetime
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 from pathlib import Path
-from typing import Callable, TypedDict
+from typing import TypedDict
 
 from .assets import ResolvedAssets, resolve_assets
 from .audio import AudioPlayer
@@ -43,7 +45,7 @@ class AppRuntime:
     selected_voice: str = "af_sarah"
     _mp3_save_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
     _mp3_save_thread: threading.Thread | None = field(default=None, init=False, repr=False)
-    _mp3_save_results: "queue.Queue[tuple[Path | None, Exception | None]]" = field(
+    _mp3_save_results: queue.Queue[tuple[Path | None, Exception | None]] = field(
         default_factory=queue.Queue,
         init=False,
         repr=False,
@@ -113,7 +115,10 @@ class AppRuntime:
             self.status_message = f"Unable to save MP3: {to_user_message(error)}"
             self.metrics.increment("save_mp3_failed")
             if self.telemetry is not None:
-                self.telemetry.record("save_mp3_failed", {"error_code": error.code.value, "category": error.category.value})
+                self.telemetry.record(
+                    "save_mp3_failed",
+                    {"error_code": error.code.value, "category": error.category.value},
+                )
             return None
 
         self.status_message = f"Saved MP3: {saved_path}"
@@ -207,7 +212,10 @@ class AppRuntime:
             self.status_message = f"Unable to load PDF: {to_user_message(error)}"
             self.metrics.increment("pdf_load_failed")
             if self.telemetry is not None:
-                self.telemetry.record("pdf_load_failed", {"error_code": error.code.value, "category": error.category.value})
+                self.telemetry.record(
+                    "pdf_load_failed",
+                    {"error_code": error.code.value, "category": error.category.value},
+                )
             return None
 
         self.set_text(text)
@@ -299,7 +307,10 @@ class AppRuntime:
             self.status_message = f"Speech generation failed: {to_user_message(error)}"
             self.metrics.increment("playback_error")
             if self.telemetry is not None:
-                self.telemetry.record("playback_error", {"error_code": error.code.value, "category": error.category.value})
+                self.telemetry.record(
+                    "playback_error",
+                    {"error_code": error.code.value, "category": error.category.value},
+                )
             return
 
         if event.state.value == "idle":

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import os
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-import tomllib
-
 
 DEFAULT_MODEL_URL = "https://github.com/hexgrad/kokoro/releases/download/v0.19/kokoro-v0_19.onnx"
 DEFAULT_VOICES_URL = "https://github.com/hexgrad/kokoro/releases/download/v0.19/voices.bin"
@@ -50,7 +49,7 @@ class AppConfig:
     normalization_cache_size: int = 512
 
     @classmethod
-    def from_env(cls, base: "AppConfig | None" = None) -> "AppConfig":
+    def from_env(cls, base: AppConfig | None = None) -> AppConfig:
         base_cfg = base or cls()
 
         backend_mode = os.getenv("KOOKIE_BACKEND_MODE", base_cfg.backend_mode).strip().lower() or "auto"
@@ -69,15 +68,26 @@ class AppConfig:
             _safe_float(os.getenv("KOOKIE_AUDIO_QUEUE_TIMEOUT"), default=base_cfg.audio_queue_timeout),
             default=0.1,
         )
-        health_check_port = _sanitize_port(_safe_int(os.getenv("KOOKIE_HEALTH_CHECK_PORT"), default=base_cfg.health_check_port))
+        health_check_port = _sanitize_port(
+            _safe_int(
+                os.getenv("KOOKIE_HEALTH_CHECK_PORT"),
+                default=base_cfg.health_check_port,
+            )
+        )
 
         return cls(
             config_version=max(1, _safe_int(os.getenv("KOOKIE_CONFIG_VERSION"), default=base_cfg.config_version)),
             backend_mode=backend_mode,
             asset_dir=asset_dir,
             config_file=Path(os.getenv("KOOKIE_CONFIG_FILE", str(base_cfg.config_file))).expanduser(),
-            model_filename=os.getenv("KOOKIE_MODEL_FILENAME", base_cfg.model_filename).strip() or base_cfg.model_filename,
-            voices_filename=os.getenv("KOOKIE_VOICES_FILENAME", base_cfg.voices_filename).strip() or base_cfg.voices_filename,
+            model_filename=(
+                os.getenv("KOOKIE_MODEL_FILENAME", base_cfg.model_filename).strip()
+                or base_cfg.model_filename
+            ),
+            voices_filename=(
+                os.getenv("KOOKIE_VOICES_FILENAME", base_cfg.voices_filename).strip()
+                or base_cfg.voices_filename
+            ),
             model_url=os.getenv("KOOKIE_MODEL_URL", base_cfg.model_url).strip() or DEFAULT_MODEL_URL,
             voices_url=os.getenv("KOOKIE_VOICES_URL", base_cfg.voices_url).strip() or DEFAULT_VOICES_URL,
             model_sha256=_clean_optional(os.getenv("KOOKIE_MODEL_SHA256")),
@@ -94,8 +104,13 @@ class AppConfig:
                 os.getenv("KOOKIE_ASSET_AUTO_UPDATE"),
                 default=base_cfg.asset_auto_update,
             ),
-            asset_manifest_filename=os.getenv("KOOKIE_ASSET_MANIFEST_FILENAME", base_cfg.asset_manifest_filename).strip()
-            or "asset_manifest.json",
+            asset_manifest_filename=(
+                os.getenv(
+                    "KOOKIE_ASSET_MANIFEST_FILENAME",
+                    base_cfg.asset_manifest_filename,
+                ).strip()
+                or "asset_manifest.json"
+            ),
             telemetry_enabled=_safe_bool(
                 os.getenv("KOOKIE_TELEMETRY_ENABLED"),
                 default=base_cfg.telemetry_enabled,
@@ -120,7 +135,13 @@ class AppConfig:
             ),
             health_check_host=os.getenv("KOOKIE_HEALTH_CHECK_HOST", base_cfg.health_check_host).strip() or "127.0.0.1",
             health_check_port=health_check_port,
-            synthesis_cache_size=max(1, _safe_int(os.getenv("KOOKIE_SYNTH_CACHE_SIZE"), default=base_cfg.synthesis_cache_size)),
+            synthesis_cache_size=max(
+                1,
+                _safe_int(
+                    os.getenv("KOOKIE_SYNTH_CACHE_SIZE"),
+                    default=base_cfg.synthesis_cache_size,
+                ),
+            ),
             normalization_cache_size=max(
                 64,
                 _safe_int(os.getenv("KOOKIE_TEXT_CACHE_SIZE"), default=base_cfg.normalization_cache_size),
@@ -128,7 +149,7 @@ class AppConfig:
         )
 
     @classmethod
-    def from_toml(cls, path: Path) -> "AppConfig":
+    def from_toml(cls, path: Path) -> AppConfig:
         try:
             payload = tomllib.loads(path.read_text(encoding="utf-8"))
         except (FileNotFoundError, OSError, ValueError, tomllib.TOMLDecodeError):
@@ -167,7 +188,12 @@ class AppConfig:
             or "asset_manifest.json",
             telemetry_enabled=_safe_bool(_value("telemetry_enabled", False), default=False),
             telemetry_file=Path(
-                str(_value("telemetry_file", Path.home() / "Library" / "Application Support" / "Kookie" / "telemetry.jsonl"))
+                str(
+                    _value(
+                        "telemetry_file",
+                        Path.home() / "Library" / "Application Support" / "Kookie" / "telemetry.jsonl",
+                    )
+                )
             ).expanduser(),
             update_check_enabled=_safe_bool(_value("update_check_enabled", True), default=True),
             update_repo=str(_value("update_repo", "ematta/kookie")).strip() or "ematta/kookie",
