@@ -9,6 +9,8 @@ from kookie.ui import (
     _scroll_view_config,
     _status_display_items,
     _status_label_config,
+    _update_recent_files,
+    detect_system_dark_mode,
 )
 
 
@@ -89,3 +91,22 @@ def test_status_layout_reserves_enough_vertical_space_for_two_rows() -> None:
 
 def test_label_text_size_tracks_width_without_forcing_height() -> None:
     assert _label_text_size_for_width(320) == (320, None)
+
+
+def test_update_recent_files_deduplicates_and_caps_list() -> None:
+    files = ["/tmp/a.pdf", "/tmp/b.pdf", "/tmp/c.pdf"]
+    updated = _update_recent_files(files, "/tmp/b.pdf", max_items=3)
+
+    assert updated == ["/tmp/b.pdf", "/tmp/a.pdf", "/tmp/c.pdf"]
+
+    updated = _update_recent_files(updated, "/tmp/d.pdf", max_items=3)
+    assert updated == ["/tmp/d.pdf", "/tmp/b.pdf", "/tmp/a.pdf"]
+
+
+def test_detect_system_dark_mode_parses_apple_script_output() -> None:
+    def _runner(*_args, **_kwargs):
+        class _Completed:
+            stdout = "true\n"
+        return _Completed()
+
+    assert detect_system_dark_mode(platform_name="darwin", runner=_runner) is True

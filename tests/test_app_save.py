@@ -60,7 +60,8 @@ def test_save_mp3_updates_status_on_failure(tmp_path: Path, monkeypatch) -> None
     monkeypatch.setattr("kookie.app.save_speech_to_mp3", _fake_save_speech_to_mp3)
 
     assert runtime.save_mp3(output_path=tmp_path / "saved.mp3") is None
-    assert runtime.status_message == "Unable to save MP3: ffmpeg is required"
+    assert runtime.status_message.startswith("Unable to save MP3:")
+    assert "ffmpeg is required" in runtime.status_message
 
 
 def _wait_for_async_save(runtime, timeout: float = 2.0) -> None:
@@ -178,4 +179,5 @@ def test_poll_mp3_save_updates_status_on_failure(tmp_path: Path, monkeypatch) ->
     _wait_for_async_save(runtime)
 
     assert runtime.is_saving_mp3 is False
-    assert runtime.status_message == "Unable to save MP3: ffmpeg is required"
+    assert runtime.status_message.startswith("Unable to save MP3:")
+    assert "ffmpeg is required" in runtime.status_message

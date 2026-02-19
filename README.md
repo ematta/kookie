@@ -37,6 +37,7 @@ The UI includes a status bar with three fields:
 - `Voice: ...` (first field, availability of `voices.bin`)
 - `Backend: ...` (active backend mode)
 - `State: ...` (runtime playback/activity state)
+- `Progress: ...` and `Recent: ...` rows for playback/export context
 
 ## Input behavior
 
@@ -52,6 +53,13 @@ The UI includes a status bar with three fields:
 - Loading a PDF replaces existing text in the editor.
 - Use `Save MP3` to export synthesized speech to `~/Downloads/kookie-<timestamp>.mp3`.
 - PDF import currently supports text-based PDFs only (no OCR for scanned/image-only pages).
+- Playback supports pause/resume, seek requests, volume control, and speed presets (`0.5x`, `1.0x`, `1.5x`, `2.0x`).
+- Use keyboard shortcuts:
+  - `Cmd/Ctrl+O`: load PDF
+  - `Cmd/Ctrl+P`: play
+  - `Cmd/Ctrl+S`: save MP3
+  - `Cmd/Ctrl+Z`: undo
+  - `Cmd/Ctrl+Shift+Z`: redo
 
 MP3 export shells out to `ffmpeg`; install it if you want to use `Save MP3`.
 
@@ -66,6 +74,17 @@ MP3 export shells out to `ffmpeg`; install it if you want to use `Save MP3`.
 - `KOOKIE_DEFAULT_VOICE`: default `af_sarah`
 - `KOOKIE_SAMPLE_RATE`: default `24000`
 - `KOOKIE_DOWNLOAD_TIMEOUT`: default `30`
+- `KOOKIE_CONFIG_FILE`: optional TOML config file path
+- `KOOKIE_LANGUAGE`: `en` or `es`
+- `KOOKIE_THEME`: `system`, `light`, `dark`
+- `KOOKIE_HIGH_CONTRAST`: accessibility high-contrast mode toggle
+- `KOOKIE_TELEMETRY_ENABLED`: local opt-in telemetry (`false` by default)
+- `KOOKIE_UPDATE_CHECK_ENABLED`: check-only update prompt toggle
+- `KOOKIE_UPDATE_REPO`: GitHub repo used by update checks (default `ematta/kookie`)
+- `KOOKIE_HEALTH_CHECK_ENABLED`: enables local `/health` and `/metrics` endpoint
+- `KOOKIE_HEALTH_CHECK_HOST` / `KOOKIE_HEALTH_CHECK_PORT`: health endpoint bind config
+- `KOOKIE_REQUIRE_ASSET_CHECKSUMS`: enforce checksum presence before trusting assets
+- `KOOKIE_ASSET_AUTO_UPDATE`: auto-refresh assets when tracked versions change
 
 ## Packaging
 
@@ -73,12 +92,13 @@ MP3 export shells out to `ffmpeg`; install it if you want to use `Save MP3`.
 scripts/build_app.sh
 scripts/sign_app.sh dist/Kookie.app "Developer ID Application: Your Name"
 scripts/notarize_app.sh dist/Kookie.app "AC_PASSWORD"
+scripts/create_dmg.sh dist/Kookie.app
 ```
 
 ## Tests
 
 ```bash
-pytest
+uv run pytest -q
 ```
 
 If dependencies are unavailable in the current environment, install the dev extras first.

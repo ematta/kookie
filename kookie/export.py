@@ -4,12 +4,14 @@ import os
 import shutil
 import subprocess
 import sys
+import wave
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Callable
 
 import numpy as np
 
+from .errors import ErrorCategory, ErrorCode, KookieError
 from .text_processing import normalize_text, split_sentences
 
 
@@ -23,6 +25,34 @@ def save_speech_to_mp3(
     normalizer: Callable[[str], str] = normalize_text,
     chunker: Callable[[str], list[str]] = split_sentences,
     encoder: Callable[[np.ndarray, int, Path], None] | None = None,
+    quality: int = 2,
+) -> Path:
+    return save_speech_to_audio(
+        backend=backend,
+        text=text,
+        voice=voice,
+        sample_rate=sample_rate,
+        output_path=output_path,
+        format="mp3",
+        normalizer=normalizer,
+        chunker=chunker,
+        encoder=encoder,
+        quality=quality,
+    )
+
+
+def save_speech_to_audio(
+    *,
+    backend,
+    text: str,
+    voice: str,
+    sample_rate: int,
+    output_path: Path,
+    format: str = "mp3",
+    normalizer: Callable[[str], str] = normalize_text,
+    chunker: Callable[[str], list[str]] = split_sentences,
+    encoder: Callable[[np.ndarray, int, Path], None] | None = None,
+    quality: int = 2,
 ) -> Path:
     normalized = normalizer(text)
     if not normalized:
@@ -45,8 +75,15 @@ def save_speech_to_mp3(
     output.parent.mkdir(parents=True, exist_ok=True)
 
     merged = np.concatenate(chunks).astype(np.float32, copy=False)
-    selected_encoder = encoder or encode_mp3
-    selected_encoder(merged, sample_rate, output)
+    selected_format = format.strip().lower()
+    if selected_format == "mp3":
+        selected_encoder = encoder or (lambda audio, sr, path: encode_mp3(audio, sr, path, quality=quality))
+        selected_encoder(merged, sample_rate, output)
+    elif selected_format == "wav":
+        selected_encoder = encoder or encode_wav
+        selected_encoder(merged, sample_rate, output)
+    else:
+        raise ValueError(f"Unsupported export format: {format}")
     return output
 
 
@@ -55,9 +92,11 @@ def encode_mp3(
     sample_rate: int,
     output_path: Path,
     *,
+    quality: int = 2,
     runner: Callable[..., object] = subprocess.run,
 ) -> None:
     ffmpeg_executable = _resolve_ffmpeg_executable()
+    normalized_quality = min(9, max(0, int(quality)))
     command = [
         ffmpeg_executable,
         "-y",
@@ -71,7 +110,7 @@ def encode_mp3(
         "pipe:0",
         "-vn",
         "-q:a",
-        "2",
+        str(normalized_quality),
         str(output_path),
     ]
 
@@ -86,7 +125,13 @@ def encode_mp3(
             check=False,
         )
     except FileNotFoundError as exc:
-        raise RuntimeError("ffmpeg is required to save MP3 files") from exc
+        raise KookieError(
+            code=ErrorCode.FILE_NOT_FOUND,
+            category=ErrorCategory.FILESYSTEM,
+            message="ffmpeg is required to save MP3 files",
+            hint="Install ffmpeg and ensure it is available on PATH.",
+            detail=str(exc),
+        ) from exc
 
     return_code = int(getattr(result, "returncode", 0))
     if return_code == 0:
@@ -98,8 +143,31 @@ def encode_mp3(
     else:
         detail = str(stderr).strip()
     if detail:
-        raise RuntimeError(f"MP3 encoding failed: {detail}")
-    raise RuntimeError("MP3 encoding failed")
+        raise KookieError(
+            code=ErrorCode.BACKEND_FAILURE,
+            category=ErrorCategory.BACKEND,
+            message=f"MP3 encoding failed: {detail}",
+            hint="Retry the export. If it persists, check ffmpeg availability and permissions.",
+            detail=detail,
+        )
+    raise KookieError(
+        code=ErrorCode.BACKEND_FAILURE,
+        category=ErrorCategory.BACKEND,
+        message="MP3 encoding failed",
+        hint="Retry the export. If it persists, check ffmpeg availability and permissions.",
+    )
+
+
+def encode_wav(audio: np.ndarray, sample_rate: int, output_path: Path) -> None:
+    payload = np.asarray(audio, dtype=np.float32).reshape(-1)
+    clipped = np.clip(payload, -1.0, 1.0)
+    int16_data = (clipped * 32767.0).astype(np.int16)
+
+    with wave.open(str(output_path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(int16_data.tobytes())
 
 
 def _resolve_ffmpeg_executable(

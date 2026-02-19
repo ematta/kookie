@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from .controller import PlaybackState
 from .editor_prefs import (
     CURATED_FONT_NAMES,
     EDITOR_FONT_SIZES,
@@ -307,6 +308,43 @@ def _default_mp3_filename(*, now: datetime | None = None) -> str:
     return f"kookie-{selected_now.strftime('%Y%m%d-%H%M%S')}.mp3"
 
 
+def _update_recent_files(items: list[str], path: str, *, max_items: int = 8) -> list[str]:
+    cleaned_path = path.strip()
+    if not cleaned_path:
+        return list(items)
+    next_items = [cleaned_path]
+    for item in items:
+        if item == cleaned_path:
+            continue
+        next_items.append(item)
+        if len(next_items) >= max_items:
+            break
+    return next_items
+
+
+def detect_system_dark_mode(
+    *,
+    platform_name: str | None = None,
+    runner: Callable[..., Any] | None = None,
+) -> bool:
+    selected_platform = platform_name or sys.platform
+    if selected_platform != "darwin":
+        return False
+
+    selected_runner = runner or subprocess.run
+    script = 'tell application "System Events" to tell appearance preferences to return dark mode'
+    try:
+        completed = selected_runner(
+            ["osascript", "-e", script],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except Exception:
+        return False
+    return str(getattr(completed, "stdout", "")).strip().lower() == "true"
+
+
 def _prompt_pdf_path(
     *,
     dialog: Callable[..., Path | None] = _native_file_dialog,
@@ -342,7 +380,7 @@ def _prompt_mp3_output_path(
     return selected_output
 
 
-def run_kivy_ui(runtime) -> None:
+def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str | None:
     try:
         from kivy.app import App
         from kivy.clock import Clock
@@ -352,15 +390,35 @@ def run_kivy_ui(runtime) -> None:
         from kivy.uix.button import Button
         from kivy.uix.label import Label
         from kivy.uix.scrollview import ScrollView
+        from kivy.uix.slider import Slider
         from kivy.uix.spinner import Spinner
         from kivy.uix.textinput import TextInput
         from kivy.uix.togglebutton import ToggleButton
     except Exception as exc:  # pragma: no cover - depends on local GUI deps
         raise RuntimeError("Kivy is required to run the graphical application") from exc
 
+    from .i18n import get_translator
+
     class KookieApp(App):
+        def __init__(self, **kwargs: Any):
+            super().__init__(**kwargs)
+            self.startup_action: str | None = None
+
         def build(self):
-            Window.clearcolor = APP_BACKGROUND_COLOR
+            if startup_prompt is not None:
+                prompt_message = str(startup_prompt.get("message", "")).strip()
+                if prompt_message:
+                    runtime.status_message = prompt_message
+
+            self._ = get_translator(getattr(runtime.config, "language", "en"))
+            selected_theme = getattr(runtime.config, "theme", "system")
+            dark_mode = selected_theme == "dark" or (selected_theme == "system" and detect_system_dark_mode())
+            if getattr(runtime.config, "high_contrast", False):
+                Window.clearcolor = (0.0, 0.0, 0.0, 1.0)
+            elif dark_mode:
+                Window.clearcolor = APP_BACKGROUND_COLOR
+            else:
+                Window.clearcolor = (0.95, 0.96, 0.98, 1.0)
             root = BoxLayout(orientation="vertical", spacing=12, padding=[18, 14, 18, 14])
 
             self.editor_prefs = load_editor_preferences(runtime.config.asset_dir)
@@ -430,28 +488,53 @@ def run_kivy_ui(runtime) -> None:
                 padding=[8, 7, 8, 7],
             )
             self._paint_background(controls, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
-            load_btn = Button(text="Load PDF", **_control_style(background_color=CONTROL_SURFACE_COLOR))
-            self.play_btn = Button(text="Play", **_control_style(background_color=PRIMARY_BUTTON_COLOR))
-            stop_btn = Button(text="Stop", **_control_style(background_color=DANGER_BUTTON_COLOR))
-            self.save_btn = Button(text="Save MP3", **_control_style(background_color=SUCCESS_BUTTON_COLOR))
+            load_btn = Button(text=self._("Load PDF"), **_control_style(background_color=CONTROL_SURFACE_COLOR))
+            self.play_btn = Button(text=self._("Play"), **_control_style(background_color=PRIMARY_BUTTON_COLOR))
+            self.pause_btn = Button(text="Pause", **_control_style(background_color=CONTROL_SURFACE_COLOR))
+            stop_btn = Button(text=self._("Stop"), **_control_style(background_color=DANGER_BUTTON_COLOR))
+            self.save_btn = Button(text=self._("Save MP3"), **_control_style(background_color=SUCCESS_BUTTON_COLOR))
+            self.voice_picker = Spinner(
+                text=runtime.selected_voice,
+                values=runtime.available_voices(),
+                size_hint=(None, 1),
+                width=120,
+                **_control_style(background_color=CONTROL_SURFACE_COLOR),
+            )
+            self.speed_picker = Spinner(
+                text="1.0x",
+                values=["0.5x", "1.0x", "1.5x", "2.0x"],
+                size_hint=(None, 1),
+                width=90,
+                **_control_style(background_color=CONTROL_SURFACE_COLOR),
+            )
+            self.volume_slider = Slider(min=0.0, max=1.0, value=1.0, size_hint=(None, 1), width=120)
             self.save_spinner = Label(text="", size_hint=(None, 1), width=140, **_status_label_config())
             self._bind_label_text_size(self.save_spinner)
             load_btn.bind(on_press=lambda *_: self._on_load_pdf())
             self.play_btn.bind(on_press=lambda *_: self._on_play())
+            self.pause_btn.bind(on_press=lambda *_: self._on_pause())
             stop_btn.bind(on_press=lambda *_: self._on_stop())
             self.save_btn.bind(on_press=lambda *_: self._on_save())
+            self.voice_picker.bind(text=lambda _, value: self._on_voice_change(value))
+            self.speed_picker.bind(text=lambda _, value: self._on_speed_change(value))
+            self.volume_slider.bind(value=lambda _, value: self._on_volume_change(value))
             controls.add_widget(load_btn)
             controls.add_widget(self.play_btn)
+            controls.add_widget(self.pause_btn)
             controls.add_widget(stop_btn)
             controls.add_widget(self.save_btn)
+            controls.add_widget(self.voice_picker)
+            controls.add_widget(self.speed_picker)
+            controls.add_widget(self.volume_slider)
             controls.add_widget(self.save_spinner)
             root.add_widget(controls)
             self._save_spinner_tick = 0
+            self._recent_files: list[str] = []
 
             status_bar = BoxLayout(
                 orientation="vertical",
                 size_hint_y=None,
-                height=STATUS_BAR_HEIGHT,
+                height=max(102, STATUS_BAR_HEIGHT),
                 spacing=4,
                 padding=[10, 8, 10, 8],
             )
@@ -460,23 +543,32 @@ def run_kivy_ui(runtime) -> None:
             self.voice_status = Label(text="", size_hint_x=0.42, **_status_label_config())
             self.backend_status = Label(text="", size_hint_x=0.58, **_status_label_config())
             self.activity_status = Label(text="", size_hint_y=None, height=STATUS_ACTIVITY_ROW_MIN_HEIGHT, **_status_label_config())
+            self.progress_status = Label(text="", size_hint_y=None, height=22, **_status_label_config())
+            self.recent_status = Label(text="", size_hint_y=None, height=22, **_status_label_config())
             self._bind_label_text_size(self.voice_status)
             self._bind_label_text_size(self.backend_status)
             self._bind_label_text_size(self.activity_status)
+            self._bind_label_text_size(self.progress_status)
+            self._bind_label_text_size(self.recent_status)
             status_header.add_widget(self.voice_status)
             status_header.add_widget(self.backend_status)
             status_bar.add_widget(status_header)
             status_bar.add_widget(self.activity_status)
+            status_bar.add_widget(self.progress_status)
+            status_bar.add_widget(self.recent_status)
             root.add_widget(status_bar)
 
             Clock.schedule_interval(self._sync_ui, 0.1)
             self._sync_now()
             Clock.schedule_once(lambda *_: self._sync_text_input_size(), 0)
             Clock.schedule_once(lambda *_: setattr(self.text_input, "focus", True), 0)
+            Window.bind(on_key_down=self._on_key_down)
             return root
 
         def on_stop(self):
             runtime.stop()
+            if startup_prompt is not None and self.startup_action is None:
+                self.startup_action = "continue_mock"
 
         def _on_load_pdf(self) -> None:
             try:
@@ -493,6 +585,7 @@ def run_kivy_ui(runtime) -> None:
 
             loaded_text = runtime.load_pdf(selected_path)
             if loaded_text is not None:
+                self._recent_files = _update_recent_files(self._recent_files, str(selected_path))
                 self.text_input.text = loaded_text
                 self._sync_text_input_size()
             self._sync_now()
@@ -500,6 +593,13 @@ def run_kivy_ui(runtime) -> None:
         def _on_play(self) -> None:
             runtime.set_text(self.text_input.text)
             runtime.play()
+            self._sync_now()
+
+        def _on_pause(self) -> None:
+            if runtime.controller.state is PlaybackState.PAUSED:
+                runtime.resume()
+            else:
+                runtime.pause()
             self._sync_now()
 
         def _on_stop(self) -> None:
@@ -528,6 +628,63 @@ def run_kivy_ui(runtime) -> None:
             runtime.start_mp3_save(output_path=output_path)
             self._sync_now()
 
+        def _on_voice_change(self, selected_voice: str) -> None:
+            runtime.set_voice(selected_voice)
+            self._sync_now()
+
+        def _on_speed_change(self, selected_speed: str) -> None:
+            try:
+                speed = float(selected_speed.lower().replace("x", "").strip())
+            except ValueError:
+                speed = 1.0
+            runtime.set_playback_speed(speed)
+            self._sync_now()
+
+        def _on_volume_change(self, selected_volume: float) -> None:
+            runtime.set_volume(selected_volume)
+
+        def _on_key_down(self, _window, _key, _scancode, codepoint, modifiers) -> bool:
+            modifier_set = {value.lower() for value in (modifiers or [])}
+            is_primary_shortcut = "meta" in modifier_set or "ctrl" in modifier_set
+            if not is_primary_shortcut:
+                return False
+
+            key_text = (codepoint or "").lower()
+            if key_text == "p":
+                self._on_play()
+                return True
+            if key_text == "s":
+                self._on_save()
+                return True
+            if key_text == "o":
+                self._on_load_pdf()
+                return True
+            if key_text == "z":
+                if "shift" in modifier_set:
+                    self._try_redo()
+                else:
+                    self._try_undo()
+                return True
+            if startup_prompt is not None and key_text == "r":
+                self.startup_action = "retry"
+                self.stop()
+                return True
+            if startup_prompt is not None and key_text == "q":
+                self.startup_action = "quit"
+                self.stop()
+                return True
+            return False
+
+        def _try_undo(self) -> None:
+            undo = getattr(self.text_input, "do_undo", None)
+            if callable(undo):
+                undo()
+
+        def _try_redo(self) -> None:
+            redo = getattr(self.text_input, "do_redo", None)
+            if callable(redo):
+                redo()
+
         def _sync_ui(self, *_: Any) -> None:
             self._sync_now()
 
@@ -536,6 +693,7 @@ def run_kivy_ui(runtime) -> None:
             is_saving = runtime.is_saving_mp3
             self.save_btn.disabled = is_saving
             self.play_btn.disabled = is_saving
+            self.pause_btn.text = "Resume" if runtime.controller.state is PlaybackState.PAUSED else "Pause"
             self.save_spinner.text = _save_spinner_text(is_saving=is_saving, tick=self._save_spinner_tick)
             if is_saving:
                 self._save_spinner_tick += 1
@@ -546,6 +704,17 @@ def run_kivy_ui(runtime) -> None:
             self.voice_status.text = voice_text
             self.backend_status.text = backend_text
             self.activity_status.text = activity_text
+            progress = runtime.playback_progress
+            self.progress_status.text = (
+                f"Progress: {progress['played_samples']} / {progress['synthesized_samples']} samples"
+            )
+            if runtime.status_message.startswith("Saved MP3:"):
+                self._recent_files = _update_recent_files(
+                    self._recent_files,
+                    runtime.status_message.replace("Saved MP3:", "").strip(),
+                )
+            recent_tail = ", ".join(Path(item).name for item in self._recent_files[:3])
+            self.recent_status.text = f"Recent: {recent_tail}" if recent_tail else "Recent: (none)"
 
         def _on_font_change(self, selected_font: str) -> None:
             self._set_editor_preferences(font_name=selected_font)
@@ -646,4 +815,6 @@ def run_kivy_ui(runtime) -> None:
             label.bind(size=_sync_text_size)
             _sync_text_size(label)
 
-    KookieApp().run()
+    app = KookieApp()
+    app.run()
+    return app.startup_action
