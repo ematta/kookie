@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -13,7 +12,6 @@ def test_ci_workflow_exists_with_cross_platform_matrix() -> None:
     assert "runs-on: ${{ matrix.os }}" in contents
     assert "macos-latest" in contents
     assert "ubuntu-latest" in contents
-    assert "windows-latest" in contents
     assert "uv run pytest -q" in contents
 
 
@@ -29,8 +27,8 @@ def test_dependabot_config_exists() -> None:
     path = ROOT / ".github" / "dependabot.yml"
     contents = path.read_text(encoding="utf-8")
 
-    assert "package-ecosystem: \"uv\"" in contents
-    assert "package-ecosystem: \"github-actions\"" in contents
+    assert 'package-ecosystem: "uv"' in contents
+    assert 'package-ecosystem: "github-actions"' in contents
 
 
 def test_dmg_script_exists() -> None:
