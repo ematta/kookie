@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import SimpleNamespace
 
 from kookie.app import run
@@ -8,6 +8,10 @@ from kookie.config import AppConfig
 @dataclass
 class _Runtime:
     config: AppConfig
+    shutdown_calls: int = field(default=0, init=False)
+
+    def shutdown(self) -> None:
+        self.shutdown_calls += 1
 
 
 def test_run_preloads_assets_before_normal_launch(monkeypatch, tmp_path) -> None:
@@ -20,9 +24,13 @@ def test_run_preloads_assets_before_normal_launch(monkeypatch, tmp_path) -> None
         preload_calls.append(config)
         return SimpleNamespace(ready=True, message="ready")
 
+    created_runtimes: list[_Runtime] = []
+
     def fake_create(config: AppConfig, *, ensure_download: bool, **_):
         create_calls.append((config, ensure_download))
-        return _Runtime(config=config)
+        runtime = _Runtime(config=config)
+        created_runtimes.append(runtime)
+        return runtime
 
     def fake_ui(runtime, startup_prompt=None):
         startup_prompts.append(startup_prompt)
@@ -39,6 +47,8 @@ def test_run_preloads_assets_before_normal_launch(monkeypatch, tmp_path) -> None
     assert preload_calls == [cfg]
     assert create_calls == [(cfg, False)]
     assert startup_prompts == [None]
+    assert len(created_runtimes) == 1
+    assert created_runtimes[0].shutdown_calls == 1
 
 
 def test_run_launches_mock_when_preload_fails_and_user_continues(monkeypatch, tmp_path) -> None:
@@ -51,9 +61,13 @@ def test_run_launches_mock_when_preload_fails_and_user_continues(monkeypatch, tm
         preload_calls.append(config)
         return SimpleNamespace(ready=False, message="voices download failed: offline")
 
+    created_runtimes: list[_Runtime] = []
+
     def fake_create(config: AppConfig, *, ensure_download: bool, **_):
         create_calls.append((config, ensure_download))
-        return _Runtime(config=config)
+        runtime = _Runtime(config=config)
+        created_runtimes.append(runtime)
+        return runtime
 
     def fake_ui(runtime, startup_prompt=None):
         startup_prompts.append(startup_prompt)
@@ -77,6 +91,8 @@ def test_run_launches_mock_when_preload_fails_and_user_continues(monkeypatch, tm
     assert ensure_download is False
     assert created_cfg.backend_mode == "mock"
     assert startup_prompts[0] is not None
+    assert len(created_runtimes) == 1
+    assert created_runtimes[0].shutdown_calls == 1
 
 
 def test_run_stops_when_preload_fails_and_user_quits(monkeypatch, tmp_path) -> None:
@@ -88,9 +104,13 @@ def test_run_stops_when_preload_fails_and_user_quits(monkeypatch, tmp_path) -> N
         preload_calls.append(config)
         return SimpleNamespace(ready=False, message="model download failed: offline")
 
+    created_runtimes: list[_Runtime] = []
+
     def fake_create(config: AppConfig, *, ensure_download: bool, **_):
         create_calls.append((config, ensure_download))
-        return _Runtime(config=config)
+        runtime = _Runtime(config=config)
+        created_runtimes.append(runtime)
+        return runtime
 
     def fake_ui(runtime, startup_prompt=None):
         assert runtime.config.backend_mode == "mock"
@@ -106,6 +126,8 @@ def test_run_stops_when_preload_fails_and_user_quits(monkeypatch, tmp_path) -> N
 
     assert preload_calls == [cfg]
     assert len(create_calls) == 1
+    assert len(created_runtimes) == 1
+    assert created_runtimes[0].shutdown_calls == 1
 
 
 def test_run_retries_preload_when_requested(monkeypatch, tmp_path) -> None:
@@ -122,9 +144,13 @@ def test_run_retries_preload_when_requested(monkeypatch, tmp_path) -> None:
         preload_calls.append(config)
         return preload_results.pop(0)
 
+    created_runtimes: list[_Runtime] = []
+
     def fake_create(config: AppConfig, *, ensure_download: bool, **_):
         create_calls.append((config, ensure_download))
-        return _Runtime(config=config)
+        runtime = _Runtime(config=config)
+        created_runtimes.append(runtime)
+        return runtime
 
     def fake_ui(runtime, startup_prompt=None):
         startup_prompts.append(startup_prompt)
@@ -151,3 +177,5 @@ def test_run_retries_preload_when_requested(monkeypatch, tmp_path) -> None:
     assert second_ensure_download is False
     assert startup_prompts[0] is not None
     assert startup_prompts[1] is None
+    assert len(created_runtimes) == 2
+    assert all(runtime.shutdown_calls == 1 for runtime in created_runtimes)

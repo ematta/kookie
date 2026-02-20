@@ -45,3 +45,18 @@ def test_runtime_check_for_updates_updates_status_when_newer(tmp_path: Path) -> 
     assert info is not None
     assert "Update available" in runtime.status_message
     assert "0.2.0" in runtime.status_message
+
+
+def test_runtime_check_for_updates_handles_checker_failure(tmp_path: Path) -> None:
+    runtime = create_app(
+        AppConfig(backend_mode="mock", asset_dir=tmp_path, update_check_enabled=True),
+        ensure_download=False,
+        audio_player=_AudioPlayer(),
+    )
+
+    def failing_checker(**_kwargs):
+        raise RuntimeError("network down")
+
+    assert runtime.check_for_updates(checker=failing_checker) is None
+    assert runtime.status_message.startswith("Unable to check for updates:")
+    assert runtime.metrics.snapshot().get("update_check_failed", 0) == 1
