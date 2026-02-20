@@ -113,7 +113,7 @@ def resolve_assets(
             (specs[0].version and manifest.model_version and specs[0].version != manifest.model_version)
             or (specs[1].version and manifest.voices_version and specs[1].version != manifest.voices_version)
         ):
-            model_path = _attempt_download(
+            refreshed_model_path = _attempt_download(
                 specs[0],
                 target_dir,
                 config.download_timeout,
@@ -121,7 +121,11 @@ def resolve_assets(
                 errors,
                 progress_callback,
             )
-            voices_path = _attempt_download(
+            if refreshed_model_path is not None:
+                model_path = refreshed_model_path
+                downloaded = True
+
+            refreshed_voices_path = _attempt_download(
                 specs[1],
                 target_dir,
                 config.download_timeout,
@@ -129,14 +133,12 @@ def resolve_assets(
                 errors,
                 progress_callback,
             )
-            downloaded = downloaded or (model_path is not None or voices_path is not None)
+            if refreshed_voices_path is not None:
+                voices_path = refreshed_voices_path
+                downloaded = True
 
     ready = model_path is not None and voices_path is not None
-    verified = bool(
-        ready
-        and (not specs[0].sha256 or model_path is not None)
-        and (not specs[1].sha256 or voices_path is not None)
-    )
+    verified = bool(ready and (not require_checksums or all(spec.sha256 for spec in specs)))
 
     if ready:
         _save_manifest(

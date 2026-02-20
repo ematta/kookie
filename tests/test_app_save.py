@@ -1,3 +1,4 @@
+import json
 import time
 from pathlib import Path
 from threading import Event
@@ -181,3 +182,36 @@ def test_poll_mp3_save_updates_status_on_failure(tmp_path: Path, monkeypatch) ->
     assert runtime.is_saving_mp3 is False
     assert runtime.status_message.startswith("Unable to save MP3:")
     assert "ffmpeg is required" in runtime.status_message
+
+
+def test_poll_mp3_save_records_completed_telemetry_on_success(tmp_path: Path, monkeypatch) -> None:
+    telemetry_path = tmp_path / "telemetry.jsonl"
+    runtime = create_app(
+        AppConfig(
+            backend_mode="mock",
+            asset_dir=tmp_path,
+            telemetry_enabled=True,
+            telemetry_file=telemetry_path,
+        ),
+        ensure_download=False,
+        audio_player=_AudioPlayer(),
+    )
+    runtime.set_text("Save this speech")
+    output_path = tmp_path / "saved.mp3"
+
+    def _fake_save_speech_to_mp3(**kwargs):
+        kwargs["output_path"].write_bytes(b"mp3")
+        return kwargs["output_path"]
+
+    monkeypatch.setattr("kookie.app.save_speech_to_mp3", _fake_save_speech_to_mp3)
+
+    assert runtime.start_mp3_save(output_path=output_path) is True
+    _wait_for_async_save(runtime)
+
+    payloads = [
+        json.loads(line)
+        for line in telemetry_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    events = [item["event"] for item in payloads]
+    assert "save_mp3_completed" in events
