@@ -195,6 +195,8 @@ class AppRuntime:
         if saved_path is not None:
             self.status_message = f"Saved MP3: {saved_path}"
             self.metrics.increment("save_mp3_completed")
+            if self.telemetry is not None:
+                self.telemetry.record("save_mp3_completed", {"path": str(saved_path)})
             return
 
         self.status_message = "Unable to save MP3: Unknown save failure"
@@ -227,6 +229,31 @@ class AppRuntime:
 
     def wait_until_idle(self, timeout: float = 5.0) -> None:
         self.controller.wait_until_idle(timeout=timeout)
+
+    def shutdown(self) -> None:
+        try:
+            self.stop()
+            self.wait_until_idle(timeout=0.2)
+        except Exception:
+            pass
+
+        server = self._health_server
+        if server is None:
+            return
+
+        self._health_server = None
+        shutdown_server = getattr(server, "shutdown", None)
+        if callable(shutdown_server):
+            try:
+                shutdown_server()
+            except Exception:
+                pass
+        close_server = getattr(server, "server_close", None)
+        if callable(close_server):
+            try:
+                close_server()
+            except Exception:
+                pass
 
     def pause(self) -> bool:
         return self.controller.pause()
@@ -274,10 +301,22 @@ class AppRuntime:
         if not getattr(self.config, "update_check_enabled", True):
             return None
 
-        info = checker(
-            current_version=_current_app_version(),
-            repo=self.config.update_repo,
-        )
+        try:
+            info = checker(
+                current_version=_current_app_version(),
+                repo=self.config.update_repo,
+            )
+        except Exception as exc:
+            categorized = classify_exception(exc)
+            self.status_message = f"Unable to check for updates: {to_user_message(categorized)}"
+            self.metrics.increment("update_check_failed")
+            if self.telemetry is not None:
+                self.telemetry.record(
+                    "update_check_failed",
+                    {"error_code": categorized.code.value, "category": categorized.category.value},
+                )
+            return None
+
         if info is None:
             return None
 
@@ -382,6 +421,7 @@ def create_app(
         backend=backend,
         audio_player=selected_audio_player,
         on_event=on_event,
+        queue_timeout=cfg.audio_queue_timeout,
     )
 
     runtime = AppRuntime(
@@ -428,7 +468,12 @@ def run() -> None:
             }
 
         runtime = create_app(runtime_config, ensure_download=False)
-        action = run_kivy_ui(runtime, startup_prompt=startup_prompt)
+        try:
+            action = run_kivy_ui(runtime, startup_prompt=startup_prompt)
+        finally:
+            shutdown = getattr(runtime, "shutdown", None)
+            if callable(shutdown):
+                shutdown()
 
         if startup_prompt is None:
             return

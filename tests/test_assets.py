@@ -1,4 +1,5 @@
 import io
+import json
 from urllib.error import URLError
 
 import pytest
@@ -153,4 +154,55 @@ def test_resolve_assets_can_require_checksums(tmp_path) -> None:
     resolved = resolve_assets(cfg, ensure_download=False)
 
     assert resolved.ready is False
+    assert any("checksum is required" in message for message in resolved.errors)
+
+
+def test_resolve_assets_auto_update_keeps_existing_assets_when_refresh_fails(tmp_path) -> None:
+    cfg = AppConfig(
+        asset_dir=tmp_path,
+        asset_auto_update=True,
+        model_url="https://github.com/hexgrad/kokoro/releases/download/v0.20/kokoro-v0_20.onnx",
+        voices_url="https://github.com/hexgrad/kokoro/releases/download/v0.20/voices.bin",
+    )
+    existing_model = tmp_path / cfg.model_filename
+    existing_voices = tmp_path / cfg.voices_filename
+    existing_model.write_bytes(b"model")
+    existing_voices.write_bytes(b"voices")
+    (tmp_path / cfg.asset_manifest_filename).write_text(
+        json.dumps(
+            {
+                "model_version": "v0.19",
+                "voices_version": "v0.19",
+                "updated_at": "2026-02-20T00:00:00+00:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def failing_downloader(*_, **__):
+        raise AssetDownloadError("offline")
+
+    resolved = resolve_assets(cfg, ensure_download=True, downloader=failing_downloader)
+
+    assert resolved.ready is True
+    assert resolved.model_path == existing_model
+    assert resolved.voices_path == existing_voices
+    assert resolved.downloaded is False
+    assert any("download failed" in message for message in resolved.errors)
+
+
+def test_resolve_assets_not_verified_when_checksums_required_but_missing_with_local_files(tmp_path) -> None:
+    cfg = AppConfig(
+        asset_dir=tmp_path,
+        require_asset_checksums=True,
+        model_sha256=None,
+        voices_sha256=None,
+    )
+    (tmp_path / cfg.model_filename).write_bytes(b"model")
+    (tmp_path / cfg.voices_filename).write_bytes(b"voices")
+
+    resolved = resolve_assets(cfg, ensure_download=False)
+
+    assert resolved.ready is True
+    assert resolved.verified is False
     assert any("checksum is required" in message for message in resolved.errors)
