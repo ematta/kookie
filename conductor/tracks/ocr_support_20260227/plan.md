@@ -11,7 +11,7 @@
     - [x] Verify tests pass and coverage >80%
   - [x] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Detection' (Protocol in workflow.md) [checkpoint: f11d772]
 
-- [ ] **Phase 2: Core OCR Implementation**
+- [x] **Phase 2: Core OCR Implementation** [checkpoint: 4f9fce6]
   - [x] Task: Extract images from PDF pages for OCR (4254eac)
     - [x] Write failing test for image extraction from a PDF page
     - [x] Implement image extraction logic using PyMuPDF
@@ -20,7 +20,7 @@
     - [x] Write failing test for processing a page image with OCR
     - [x] Implement `perform_ocr_on_page` using `pytesseract`
     - [x] Verify tests pass and coverage >80%
-  - [ ] Task: Conductor - User Manual Verification 'Phase 2: Core OCR Implementation' (Protocol in workflow.md) [checkpoint: ]
+  - [x] Task: Conductor - User Manual Verification 'Phase 2: Core OCR Implementation' (Protocol in workflow.md) [checkpoint: 4f9fce6]
 
 - [ ] **Phase 3: Integration & UI Feedback**
   - [ ] Task: Update Controller and UI to handle OCR flow
