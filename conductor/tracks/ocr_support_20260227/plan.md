@@ -1,10 +1,10 @@
 # Track Implementation Plan - ocr_support_20260227
 
 - [ ] **Phase 1: Foundation & Detection**
-  - [ ] Task: Research OCR libraries and update `pyproject.toml`
-    - [ ] Research `pytesseract` and Tesseract engine compatibility for macOS
-    - [ ] Update `pyproject.toml` with new dependencies
-    - [ ] Run `uv sync` to install dependencies
+  - [x] Task: Research OCR libraries and update `pyproject.toml` (14396bf)
+    - [x] Research `pytesseract` and Tesseract engine compatibility for macOS
+    - [x] Update `pyproject.toml` with new dependencies
+    - [x] Run `uv sync` to install dependencies
   - [ ] Task: Implement OCR detection in `pdf_import.py`
     - [ ] Write failing test for detecting a "text-less" PDF page
     - [ ] Implement `is_page_scanned` check in `pdf_import.py`
