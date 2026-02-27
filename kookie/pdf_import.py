@@ -80,6 +80,17 @@ def extract_pdf_content(
     )
 
 
+def is_page_scanned(page: object) -> bool:
+    """Determines if a PDF page likely contains only image data and needs OCR."""
+    try:
+        # We consider a page scanned if it has no extractable text.
+        text = str(page.get_text("text")).strip()  # type: ignore[attr-defined]
+        return not text
+    except Exception:
+        # If we can't check, assume it might need OCR if it's unreadable.
+        return True
+
+
 def _normalize_page_text(value: object) -> str:
     text = "" if value is None else str(value)
     text = text.replace("\r\n", "\n").replace("\r", "\n")
