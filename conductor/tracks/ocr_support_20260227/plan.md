@@ -5,10 +5,10 @@
     - [x] Research `pytesseract` and Tesseract engine compatibility for macOS
     - [x] Update `pyproject.toml` with new dependencies
     - [x] Run `uv sync` to install dependencies
-  - [ ] Task: Implement OCR detection in `pdf_import.py`
-    - [ ] Write failing test for detecting a "text-less" PDF page
-    - [ ] Implement `is_page_scanned` check in `pdf_import.py`
-    - [ ] Verify tests pass and coverage >80%
+  - [x] Task: Implement OCR detection in `pdf_import.py` (15481be)
+    - [x] Write failing test for detecting a "text-less" PDF page
+    - [x] Implement `is_page_scanned` check in `pdf_import.py`
+    - [x] Verify tests pass and coverage >80%
   - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Detection' (Protocol in workflow.md) [checkpoint: ]
 
 - [ ] **Phase 2: Core OCR Implementation**
