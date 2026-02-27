@@ -12,10 +12,10 @@
   - [x] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Detection' (Protocol in workflow.md) [checkpoint: f11d772]
 
 - [ ] **Phase 2: Core OCR Implementation**
-  - [ ] Task: Extract images from PDF pages for OCR
-    - [ ] Write failing test for image extraction from a PDF page
-    - [ ] Implement image extraction logic using PyMuPDF
-    - [ ] Verify tests pass and coverage >80%
+  - [x] Task: Extract images from PDF pages for OCR (4254eac)
+    - [x] Write failing test for image extraction from a PDF page
+    - [x] Implement image extraction logic using PyMuPDF
+    - [x] Verify tests pass and coverage >80%
   - [ ] Task: Implement OCR processing using Tesseract
     - [ ] Write failing test for processing a page image with OCR
     - [ ] Implement `perform_ocr_on_page` using `pytesseract`
