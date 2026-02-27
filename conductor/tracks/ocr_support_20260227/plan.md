@@ -16,10 +16,10 @@
     - [x] Write failing test for image extraction from a PDF page
     - [x] Implement image extraction logic using PyMuPDF
     - [x] Verify tests pass and coverage >80%
-  - [ ] Task: Implement OCR processing using Tesseract
-    - [ ] Write failing test for processing a page image with OCR
-    - [ ] Implement `perform_ocr_on_page` using `pytesseract`
-    - [ ] Verify tests pass and coverage >80%
+  - [x] Task: Implement OCR processing using Tesseract (d73ce95)
+    - [x] Write failing test for processing a page image with OCR
+    - [x] Implement `perform_ocr_on_page` using `pytesseract`
+    - [x] Verify tests pass and coverage >80%
   - [ ] Task: Conductor - User Manual Verification 'Phase 2: Core OCR Implementation' (Protocol in workflow.md) [checkpoint: ]
 
 - [ ] **Phase 3: Integration & UI Feedback**
