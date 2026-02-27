@@ -91,6 +91,15 @@ def is_page_scanned(page: object) -> bool:
         return True
 
 
+def get_page_image_bytes(page: object, fmt: str = "png") -> bytes:
+    """Renders a PDF page to a pixmap and returns the image bytes in the specified format."""
+    try:
+        pix = page.get_pixmap()  # type: ignore[attr-defined]
+        return bytes(pix.tobytes(fmt))
+    except Exception as exc:
+        raise PdfImportError(f"Failed to extract image from page: {exc}") from exc
+
+
 def _normalize_page_text(value: object) -> str:
     text = "" if value is None else str(value)
     text = text.replace("\r\n", "\n").replace("\r", "\n")
