@@ -1,6 +1,6 @@
 # Track Implementation Plan - ocr_support_20260227
 
-- [ ] **Phase 1: Foundation & Detection**
+- [x] **Phase 1: Foundation & Detection** [checkpoint: f11d772]
   - [x] Task: Research OCR libraries and update `pyproject.toml` (14396bf)
     - [x] Research `pytesseract` and Tesseract engine compatibility for macOS
     - [x] Update `pyproject.toml` with new dependencies
@@ -9,7 +9,7 @@
     - [x] Write failing test for detecting a "text-less" PDF page
     - [x] Implement `is_page_scanned` check in `pdf_import.py`
     - [x] Verify tests pass and coverage >80%
-  - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Detection' (Protocol in workflow.md) [checkpoint: ]
+  - [x] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Detection' (Protocol in workflow.md) [checkpoint: f11d772]
 
 - [ ] **Phase 2: Core OCR Implementation**
   - [ ] Task: Extract images from PDF pages for OCR
