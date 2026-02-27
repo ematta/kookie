@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import io
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -98,6 +99,22 @@ def get_page_image_bytes(page: object, fmt: str = "png") -> bytes:
         return bytes(pix.tobytes(fmt))
     except Exception as exc:
         raise PdfImportError(f"Failed to extract image from page: {exc}") from exc
+
+
+def perform_ocr_on_image_bytes(image_bytes: bytes) -> str:
+    """Performs OCR on image bytes using pytesseract and returns the extracted text."""
+    try:
+        from PIL import Image
+        import pytesseract
+    except ModuleNotFoundError as exc:
+        raise PdfImportError("OCR dependencies (pytesseract, pillow) are missing.") from exc
+
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+        text = pytesseract.image_to_string(image)
+        return str(text).strip()
+    except Exception as exc:
+        raise PdfImportError(f"OCR processing failed: {exc}") from exc
 
 
 def _normalize_page_text(value: object) -> str:
