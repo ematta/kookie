@@ -1,27 +1,27 @@
 name: CI
 
 on:
-  push:                                                                                    │
-    branches: ["main"]                                                                     │
-    paths-ignore:                                                                          │
-      - "**.md"                                                                            │
-      - "docs/**"                                                                          │
-      - ".gitignore"                                                                       │
-      - ".pre-commit-config.yaml"                                                          │
-      - "assets/**"                                                                        │
-      - "kookie.png"                                                                       │
-      - "packaging/**"                                                                     │
-      - "scripts/**"                                                                       │
-  pull_request:                                                                            │
-    branches: ["main"]                                                                     │
-    paths-ignore:                                                                          │
-      - "**.md"                                                                            │
-      - "docs/**"                                                                          │
-      - ".gitignore"                                                                       │
-      - ".pre-commit-config.yaml"                                                          │
-      - "assets/**"                                                                        │
-      - "kookie.png"                                                                       │
-      - "packaging/**"                                                                     │
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".gitignore"
+      - ".pre-commit-config.yaml"
+      - "assets/**"
+      - "kookie.png"
+      - "packaging/**"
+      - "scripts/**"
+  pull_request:
+    branches: ["main"]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".gitignore"
+      - ".pre-commit-config.yaml"
+      - "assets/**"
+      - "kookie.png"
+      - "packaging/**"
       - "scripts/**"
 
 jobs:
