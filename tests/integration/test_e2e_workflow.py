@@ -6,6 +6,7 @@ import pytest
 
 from kookie.app import create_app
 from kookie.config import AppConfig
+from kookie.pdf_import import PdfImportResult
 
 
 class _AudioPlayer:
@@ -26,7 +27,10 @@ def test_e2e_load_play_export_workflow(tmp_path: Path, monkeypatch) -> None:
         audio_player=_AudioPlayer(),
     )
 
-    loaded = runtime.load_pdf(tmp_path / "notes.pdf", loader=lambda _: "One sentence. Two sentence.")
+    loaded = runtime.load_pdf(
+        tmp_path / "notes.pdf", 
+        loader=lambda *_, **__: PdfImportResult(text="One sentence. Two sentence.", pages_loaded=[1])
+    )
     assert loaded == "One sentence. Two sentence."
 
     assert runtime.play() is True

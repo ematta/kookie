@@ -18,7 +18,7 @@ from .controller import ControllerEvent, PlaybackController
 from .errors import classify_exception, to_user_message
 from .export import save_speech_to_mp3
 from .monitoring import HealthStatus, MetricsStore, start_health_server
-from .pdf_import import extract_pdf_text
+from .pdf_import import PdfImportResult, extract_pdf_content
 from .preload import preload_assets
 from .telemetry import LocalTelemetry
 from .text_processing import normalize_text
@@ -51,6 +51,14 @@ class AppRuntime:
         repr=False,
     )
     _is_saving_mp3: bool = field(default=False, init=False, repr=False)
+    _pdf_load_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    _pdf_load_thread: threading.Thread | None = field(default=None, init=False, repr=False)
+    _pdf_load_results: queue.Queue[tuple[str | None, Path | None, bool, Exception | None]] = field(
+        default_factory=queue.Queue,
+        init=False,
+        repr=False,
+    )
+    _is_loading_pdf: bool = field(default=False, init=False, repr=False)
     telemetry: LocalTelemetry | None = field(default=None, repr=False)
     metrics: MetricsStore = field(default_factory=MetricsStore, repr=False)
     _health_server: object | None = field(default=None, init=False, repr=False)
@@ -205,10 +213,15 @@ class AppRuntime:
         self,
         pdf_path: Path,
         *,
-        loader: Callable[[Path], str] = extract_pdf_text,
+        loader: Callable[..., PdfImportResult] = extract_pdf_content,
     ) -> str | None:
         try:
-            text = loader(pdf_path)
+            def _progress(current: int, total: int) -> None:
+                self.status_message = f"Loading PDF page {current} of {total}..."
+
+            # We enable OCR fallback by default for user PDF imports now.
+            result = loader(pdf_path, use_ocr_fallback=True, progress_callback=_progress)
+            text = result.text
         except Exception as exc:
             error = classify_exception(exc)
             self.status_message = f"Unable to load PDF: {to_user_message(error)}"
@@ -221,11 +234,118 @@ class AppRuntime:
             return None
 
         self.set_text(text)
-        self.status_message = f"Loaded PDF: {pdf_path.name}"
+        if result.used_ocr:
+            self.status_message = f"Loaded PDF (with OCR): {pdf_path.name}"
+        else:
+            self.status_message = f"Loaded PDF: {pdf_path.name}"
+            
         self.metrics.increment("pdf_loaded")
         if self.telemetry is not None:
-            self.telemetry.record("pdf_loaded", {"path": str(pdf_path), "text_len": len(self.text)})
+            self.telemetry.record(
+                "pdf_loaded", 
+                {"path": str(pdf_path), "text_len": len(self.text), "ocr": result.used_ocr}
+            )
         return text
+
+    @property
+    def is_loading_pdf(self) -> bool:
+        with self._pdf_load_lock:
+            return self._is_loading_pdf
+
+    def start_pdf_load(
+        self,
+        pdf_path: Path,
+        *,
+        loader: Callable[..., PdfImportResult] = extract_pdf_content,
+    ) -> bool:
+        with self._pdf_load_lock:
+            if self._is_loading_pdf:
+                self.status_message = "PDF load is already in progress."
+                return False
+
+            self._clear_pdf_load_results()
+            self._is_loading_pdf = True
+            self.status_message = f"Loading PDF: {pdf_path.name}..."
+            load_thread = threading.Thread(
+                target=self._run_pdf_load_worker,
+                kwargs={
+                    "pdf_path": pdf_path,
+                    "loader": loader,
+                },
+                daemon=True,
+                name="kookie-load-pdf",
+            )
+            self._pdf_load_thread = load_thread
+
+        load_thread.start()
+        return True
+
+    def poll_pdf_load(self) -> tuple[str | None, Path | None]:
+        latest_result: tuple[str | None, Path | None, bool, Exception | None] | None = None
+        while True:
+            try:
+                latest_result = self._pdf_load_results.get_nowait()
+            except queue.Empty:
+                break
+
+        if latest_result is None:
+            return None, None
+
+        text, path, used_ocr, error = latest_result
+
+        with self._pdf_load_lock:
+            self._is_loading_pdf = False
+            self._pdf_load_thread = None
+
+        if error is not None:
+            categorized = classify_exception(error)
+            self.status_message = f"Unable to load PDF: {to_user_message(categorized)}"
+            self.metrics.increment("pdf_load_failed")
+            if self.telemetry is not None:
+                self.telemetry.record(
+                    "pdf_load_failed",
+                    {"error_code": categorized.code.value, "category": categorized.category.value},
+                )
+            return None, None
+
+        if text is not None and path is not None:
+            self.set_text(text)
+            if used_ocr:
+                self.status_message = f"Loaded PDF (with OCR): {path.name}"
+            else:
+                self.status_message = f"Loaded PDF: {path.name}"
+            self.metrics.increment("pdf_loaded")
+            if self.telemetry is not None:
+                self.telemetry.record(
+                    "pdf_loaded", 
+                    {"path": str(path), "text_len": len(self.text), "ocr": used_ocr}
+                )
+            return text, path
+
+        return None, None
+
+    def _clear_pdf_load_results(self) -> None:
+        while True:
+            try:
+                self._pdf_load_results.get_nowait()
+            except queue.Empty:
+                return
+
+    def _run_pdf_load_worker(
+        self,
+        *,
+        pdf_path: Path,
+        loader: Callable[..., PdfImportResult],
+    ) -> None:
+        try:
+            def _progress(current: int, total: int) -> None:
+                # Direct assignment is safe from background thread for this simple string
+                self.status_message = f"Loading PDF page {current} of {total}..."
+
+            result = loader(pdf_path, use_ocr_fallback=True, progress_callback=_progress)
+            self._pdf_load_results.put((result.text, pdf_path, result.used_ocr, None))
+        except Exception as exc:
+            self._pdf_load_results.put((None, pdf_path, False, exc))
 
     def wait_until_idle(self, timeout: float = 5.0) -> None:
         self.controller.wait_until_idle(timeout=timeout)

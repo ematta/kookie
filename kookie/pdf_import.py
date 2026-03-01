@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import io
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -51,14 +52,30 @@ def extract_pdf_content(
             for current_idx, page_idx in enumerate(page_indices, start=1):
                 page = page_objects[page_idx]
                 text = _normalize_page_text(page.get_text("text"))
+                
+                # Fallback to OCR if no text found and fallback enabled
+                if not text and use_ocr_fallback:
+                    try:
+                        # Attempt local OCR using pytesseract
+                        img_bytes = get_page_image_bytes(page)
+                        text = _normalize_page_text(perform_ocr_on_image_bytes(img_bytes))
+                        if text:
+                            used_ocr = True
+                    except Exception:
+                        # If local OCR fails, we still try the custom ocr_loader later 
+                        # if the entire document was empty, but per-page we just skip.
+                        pass
+
                 if text:
                     pages.append(text)
                     loaded_page_numbers.append(page_idx + 1)
+                
                 if progress_callback is not None:
                     progress_callback(current_idx, total_pages)
     except Exception as exc:
         raise PdfImportError(f"Unable to read PDF: {exc}") from exc
 
+    # Legacy whole-document fallback if still no pages found
     if not pages and use_ocr_fallback:
         selected_ocr_loader = ocr_loader or _default_ocr_loader
         try:
@@ -78,6 +95,42 @@ def extract_pdf_content(
         pages_loaded=loaded_page_numbers,
         used_ocr=used_ocr,
     )
+
+
+def is_page_scanned(page: object) -> bool:
+    """Determines if a PDF page likely contains only image data and needs OCR."""
+    try:
+        # We consider a page scanned if it has no extractable text.
+        text = str(page.get_text("text")).strip()  # type: ignore[attr-defined]
+        return not text
+    except Exception:
+        # If we can't check, assume it might need OCR if it's unreadable.
+        return True
+
+
+def get_page_image_bytes(page: object, fmt: str = "png") -> bytes:
+    """Renders a PDF page to a pixmap and returns the image bytes in the specified format."""
+    try:
+        pix = page.get_pixmap()  # type: ignore[attr-defined]
+        return bytes(pix.tobytes(fmt))
+    except Exception as exc:
+        raise PdfImportError(f"Failed to extract image from page: {exc}") from exc
+
+
+def perform_ocr_on_image_bytes(image_bytes: bytes) -> str:
+    """Performs OCR on image bytes using pytesseract and returns the extracted text."""
+    try:
+        from PIL import Image
+        import pytesseract
+    except ModuleNotFoundError as exc:
+        raise PdfImportError("OCR dependencies (pytesseract, pillow) are missing.") from exc
+
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+        text = pytesseract.image_to_string(image)
+        return str(text).strip()
+    except Exception as exc:
+        raise PdfImportError(f"OCR processing failed: {exc}") from exc
 
 
 def _normalize_page_text(value: object) -> str:

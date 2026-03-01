@@ -31,8 +31,8 @@ def test_status_bar_first_item_reports_available_voice(tmp_path: Path) -> None:
     assert runtime.status_bar_items[0] == "Voice: Available"
 
 
-def test_status_bar_updates_activity_state() -> None:
-    runtime = create_app(AppConfig(backend_mode="mock"), ensure_download=False, audio_player=_AudioPlayer())
+def test_status_bar_updates_activity_state(tmp_path: Path) -> None:
+    runtime = create_app(AppConfig(backend_mode="mock", asset_dir=tmp_path), ensure_download=False, audio_player=_AudioPlayer())
 
     runtime.on_controller_event(ControllerEvent(kind="state", state=PlaybackState.PLAYING, message=""))
 
