@@ -43,7 +43,7 @@ def test_load_pdf_shows_categorized_network_error(tmp_path: Path) -> None:
         audio_player=_AudioPlayer(),
     )
 
-    def _loader(_path: Path) -> str:
+    def _loader(_path: Path, **kwargs) -> PdfImportResult:
         raise URLError("offline")
 
     runtime.load_pdf(tmp_path / "notes.pdf", loader=_loader)
