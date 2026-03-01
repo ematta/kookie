@@ -52,14 +52,30 @@ def extract_pdf_content(
             for current_idx, page_idx in enumerate(page_indices, start=1):
                 page = page_objects[page_idx]
                 text = _normalize_page_text(page.get_text("text"))
+                
+                # Fallback to OCR if no text found and fallback enabled
+                if not text and use_ocr_fallback:
+                    try:
+                        # Attempt local OCR using pytesseract
+                        img_bytes = get_page_image_bytes(page)
+                        text = _normalize_page_text(perform_ocr_on_image_bytes(img_bytes))
+                        if text:
+                            used_ocr = True
+                    except Exception:
+                        # If local OCR fails, we still try the custom ocr_loader later 
+                        # if the entire document was empty, but per-page we just skip.
+                        pass
+
                 if text:
                     pages.append(text)
                     loaded_page_numbers.append(page_idx + 1)
+                
                 if progress_callback is not None:
                     progress_callback(current_idx, total_pages)
     except Exception as exc:
         raise PdfImportError(f"Unable to read PDF: {exc}") from exc
 
+    # Legacy whole-document fallback if still no pages found
     if not pages and use_ocr_fallback:
         selected_ocr_loader = ocr_loader or _default_ocr_loader
         try:

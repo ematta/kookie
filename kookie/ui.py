@@ -22,6 +22,7 @@ TEXT_BACKGROUND_COLOR = (0.94, 0.95, 0.97, 1.0)
 TEXT_SELECTION_COLOR = (0.70, 0.82, 0.98, 0.70)
 TEXT_CURSOR_COLOR = (0.17, 0.40, 0.85, 1.0)
 SAVE_SPINNER_FRAMES = ("|", "/", "-", "\\")
+LOAD_SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
 APP_BACKGROUND_COLOR = (0.07, 0.10, 0.15, 1.0)
 TOOLBAR_BACKGROUND_COLOR = (0.14, 0.18, 0.25, 1.0)
 CONTROL_SURFACE_COLOR = (0.21, 0.26, 0.34, 1.0)
@@ -93,6 +94,14 @@ def _save_spinner_text(*, is_saving: bool, tick: int) -> str:
 
     frame = SAVE_SPINNER_FRAMES[tick % len(SAVE_SPINNER_FRAMES)]
     return f"Saving MP3 {frame}"
+
+
+def _load_spinner_text(*, is_loading: bool, tick: int) -> str:
+    if not is_loading:
+        return ""
+
+    frame = LOAD_SPINNER_FRAMES[tick % len(LOAD_SPINNER_FRAMES)]
+    return f"Loading PDF {frame}"
 
 
 def _shorten_middle(text: str, *, max_chars: int) -> str:
@@ -519,7 +528,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 padding=[8, 7, 8, 7],
             )
             self._paint_background(controls, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
-            load_btn = Button(text=self._("Load PDF"), **_control_style(background_color=CONTROL_SURFACE_COLOR))
+            self.load_btn = Button(text=self._("Load PDF"), **_control_style(background_color=CONTROL_SURFACE_COLOR))
             self.play_btn = Button(text=self._("Play"), **_control_style(background_color=PRIMARY_BUTTON_COLOR))
             self.pause_btn = Button(text="Pause", **_control_style(background_color=CONTROL_SURFACE_COLOR))
             stop_btn = Button(text=self._("Stop"), **_control_style(background_color=DANGER_BUTTON_COLOR))
@@ -541,7 +550,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             self.volume_slider = Slider(min=0.0, max=1.0, value=1.0, size_hint=(None, 1), width=120)
             self.save_spinner = Label(text="", size_hint=(None, 1), width=140, **_status_label_config())
             self._bind_label_text_size(self.save_spinner)
-            load_btn.bind(on_press=lambda *_: self._on_load_pdf())
+            self.load_btn.bind(on_press=lambda *_: self._on_load_pdf())
             self.play_btn.bind(on_press=lambda *_: self._on_play())
             self.pause_btn.bind(on_press=lambda *_: self._on_pause())
             stop_btn.bind(on_press=lambda *_: self._on_stop())
@@ -549,7 +558,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             self.voice_picker.bind(text=lambda _, value: self._on_voice_change(value))
             self.speed_picker.bind(text=lambda _, value: self._on_speed_change(value))
             self.volume_slider.bind(value=lambda _, value: self._on_volume_change(value))
-            controls.add_widget(load_btn)
+            controls.add_widget(self.load_btn)
             controls.add_widget(self.play_btn)
             controls.add_widget(self.pause_btn)
             controls.add_widget(stop_btn)
@@ -560,6 +569,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             controls.add_widget(self.save_spinner)
             root.add_widget(controls)
             self._save_spinner_tick = 0
+            self._load_spinner_tick = 0
             self._recent_files: list[str] = []
 
             status_bar = BoxLayout(
@@ -634,11 +644,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 self._sync_now()
                 return
 
-            loaded_text = runtime.load_pdf(selected_path)
-            if loaded_text is not None:
-                self._recent_files = _update_recent_files(self._recent_files, str(selected_path))
-                self.text_input.text = loaded_text
-                self._sync_text_input_size()
+            runtime.start_pdf_load(selected_path)
             self._sync_now()
 
         def _on_play(self) -> None:
@@ -741,15 +747,32 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
 
         def _sync_now(self) -> None:
             runtime.poll_mp3_save()
+            
+            loaded_text, pdf_path = runtime.poll_pdf_load()
+            if loaded_text is not None and pdf_path is not None:
+                self._recent_files = _update_recent_files(self._recent_files, str(pdf_path))
+                self.text_input.text = loaded_text
+                self._sync_text_input_size()
+
             is_saving = runtime.is_saving_mp3
-            self.save_btn.disabled = is_saving
-            self.play_btn.disabled = is_saving
+            is_loading = runtime.is_loading_pdf
+            
+            self.save_btn.disabled = is_saving or is_loading
+            self.play_btn.disabled = is_saving or is_loading
+            self.load_btn.disabled = is_saving or is_loading
+            
             self.pause_btn.text = "Resume" if runtime.controller.state is PlaybackState.PAUSED else "Pause"
-            self.save_spinner.text = _save_spinner_text(is_saving=is_saving, tick=self._save_spinner_tick)
+            
             if is_saving:
+                self.save_spinner.text = _save_spinner_text(is_saving=is_saving, tick=self._save_spinner_tick)
                 self._save_spinner_tick += 1
+            elif is_loading:
+                self.save_spinner.text = _load_spinner_text(is_loading=is_loading, tick=self._load_spinner_tick)
+                self._load_spinner_tick += 1
             else:
+                self.save_spinner.text = ""
                 self._save_spinner_tick = 0
+                self._load_spinner_tick = 0
 
             voice_text, backend_text, activity_text = _status_display_items(runtime.status_bar_items)
             self.voice_status.text = voice_text
