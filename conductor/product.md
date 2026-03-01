@@ -18,11 +18,10 @@ Kookie is a privacy-first, local-first macOS desktop application designed to pro
 
 ## Key Features
 - **TTS Synthesis:** High-quality local voice generation using the Kokoro model.
-- **PDF Import:** Direct text extraction from PDF files for immediate playback.
+- **PDF Import with OCR:** Robust text extraction from both standard and scanned PDF files using local OCR fallback.
 - **Audio Export:** Options to save synthesized speech as high-quality MP3 and WAV files.
 - **Editor Customization:** User-selectable fonts, sizes, and word wrap preferences that persist across sessions.
 
 ## Future Scope
-- **OCR Capabilities:** Support for reading from scanned PDFs and images, expanding the utility for diverse input sources.
 - **Multilingual Support:** Broadening the language base beyond English and Spanish.
 - **Advanced Audio Controls:** More granular control over synthesis parameters and output formatting.

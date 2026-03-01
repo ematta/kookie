@@ -16,6 +16,10 @@
 
 ## Document Processing
 - **PyMuPDF (fitz):** Used for robust text extraction from PDF files, allowing users to import documents for synthesis.
+- **pytesseract:** Python wrapper for Tesseract OCR, enabling text extraction from scanned PDF pages.
+
+## OCR Engine
+- **Tesseract OCR:** A local-first, high-performance OCR engine used for processing image-based document content.
 
 ## Packaging & Deployment
 - **PyInstaller:** Packages the Python application into a standalone macOS executable (`.app`).
