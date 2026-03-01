@@ -23,11 +23,11 @@
   - [x] Task: Conductor - User Manual Verification 'Phase 2: Core OCR Implementation' (Protocol in workflow.md) [checkpoint: 4f9fce6]
 
 - [ ] **Phase 3: Integration & UI Feedback**
-  - [ ] Task: Update Controller and UI to handle OCR flow
-    - [ ] Write failing tests for UI status updates during OCR
-    - [ ] Implement background OCR processing in `controller.py`
-    - [ ] Update `ui.py` to show "Performing OCR..." status messages
-    - [ ] Verify tests pass and coverage >80%
+  - [x] Task: Update AppRuntime and UI to handle OCR flow (5e21451)
+    - [x] Write failing tests for UI status updates during OCR
+    - [x] Implement background OCR processing in `app.py`
+    - [x] Update `ui.py` to show "Performing OCR..." status messages
+    - [x] Verify tests pass and coverage >80%
   - [ ] Task: Conductor - User Manual Verification 'Phase 3: Integration & UI Feedback' (Protocol in workflow.md) [checkpoint: ]
 
 - [ ] **Phase 4: Finalization**
