@@ -1,5 +1,7 @@
 import re
 
+import pytest
+
 from kookie.text_processing import normalize_text, split_sentences
 
 
@@ -27,3 +29,13 @@ def test_split_sentences_chunks_long_segments_deterministically() -> None:
 
     rebuilt = re.sub(r"\s+", " ", " ".join(chunks_one)).strip()
     assert rebuilt == text
+
+
+def test_split_sentences_raises_for_zero_max_chars() -> None:
+    with pytest.raises(ValueError, match="max_chars must be greater than zero"):
+        split_sentences("hello world", max_chars=0)
+
+
+def test_split_sentences_raises_for_negative_max_chars() -> None:
+    with pytest.raises(ValueError, match="max_chars must be greater than zero"):
+        split_sentences("hello world", max_chars=-1)
