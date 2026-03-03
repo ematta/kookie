@@ -6,6 +6,7 @@ from urllib.error import URLError
 from conftest import _AudioPlayer
 from kookie.app import create_app
 from kookie.config import AppConfig
+from kookie.pdf_import import PdfImportResult
 
 
 def test_save_mp3_shows_categorized_filesystem_error(tmp_path: Path, monkeypatch) -> None:
