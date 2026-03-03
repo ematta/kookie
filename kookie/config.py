@@ -16,9 +16,7 @@ SUPPORTED_LANGUAGES = {"en", "es"}
 class AppConfig:
     config_version: int = 1
     backend_mode: str = "auto"
-    asset_dir: Path = field(
-        default_factory=lambda: Path.home() / "Library" / "Application Support" / "Kookie" / "assets"
-    )
+    asset_dir: Path = field(default_factory=lambda: Path.home() / ".kookie")
     config_file: Path = DEFAULT_CONFIG_FILE
     model_filename: str = "kokoro-v0_19.onnx"
     voices_filename: str = "voices.bin"
@@ -81,12 +79,10 @@ class AppConfig:
             asset_dir=asset_dir,
             config_file=Path(os.getenv("KOOKIE_CONFIG_FILE", str(base_cfg.config_file))).expanduser(),
             model_filename=(
-                os.getenv("KOOKIE_MODEL_FILENAME", base_cfg.model_filename).strip()
-                or base_cfg.model_filename
+                os.getenv("KOOKIE_MODEL_FILENAME", base_cfg.model_filename).strip() or base_cfg.model_filename
             ),
             voices_filename=(
-                os.getenv("KOOKIE_VOICES_FILENAME", base_cfg.voices_filename).strip()
-                or base_cfg.voices_filename
+                os.getenv("KOOKIE_VOICES_FILENAME", base_cfg.voices_filename).strip() or base_cfg.voices_filename
             ),
             model_url=os.getenv("KOOKIE_MODEL_URL", base_cfg.model_url).strip() or DEFAULT_MODEL_URL,
             voices_url=os.getenv("KOOKIE_VOICES_URL", base_cfg.voices_url).strip() or DEFAULT_VOICES_URL,
@@ -115,9 +111,7 @@ class AppConfig:
                 os.getenv("KOOKIE_TELEMETRY_ENABLED"),
                 default=base_cfg.telemetry_enabled,
             ),
-            telemetry_file=Path(
-                os.getenv("KOOKIE_TELEMETRY_FILE", str(base_cfg.telemetry_file))
-            ).expanduser(),
+            telemetry_file=Path(os.getenv("KOOKIE_TELEMETRY_FILE", str(base_cfg.telemetry_file))).expanduser(),
             update_check_enabled=_safe_bool(
                 os.getenv("KOOKIE_UPDATE_CHECK_ENABLED"),
                 default=base_cfg.update_check_enabled,

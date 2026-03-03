@@ -27,7 +27,7 @@ class EditorPreferences:
 
 
 def prefs_path_for_asset_dir(asset_dir: Path) -> Path:
-    return asset_dir.expanduser().parent / "editor_prefs.json"
+    return asset_dir.expanduser() / "editor_prefs.json"
 
 
 def load_editor_preferences(asset_dir: Path) -> EditorPreferences:
