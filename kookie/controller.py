@@ -66,6 +66,10 @@ class PlaybackController:
         self.last_error: Exception | None = None
 
     @property
+    def queue_timeout(self) -> float:
+        return self._queue_timeout
+
+    @property
     def state(self) -> PlaybackState:
         with self._lock:
             return self._state
