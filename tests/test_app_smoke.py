@@ -17,7 +17,7 @@ def test_create_app_mock_backend_smoke(tmp_path) -> None:
     assert runtime.play() is True
     runtime.wait_until_idle(timeout=2.0)
 
-    assert runtime.controller.state in {PlaybackState.IDLE, PlaybackState.ERROR}
+    assert runtime.controller.state is PlaybackState.IDLE
 
 
 def test_create_app_applies_audio_queue_timeout_from_config(tmp_path) -> None:
