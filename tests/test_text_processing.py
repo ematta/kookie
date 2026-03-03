@@ -25,5 +25,5 @@ def test_split_sentences_chunks_long_segments_deterministically() -> None:
     assert chunks_one == chunks_two
     assert all(len(chunk) <= 35 for chunk in chunks_one)
 
-    rebuilt = re.sub(r"\\s+", " ", " ".join(chunks_one)).strip()
+    rebuilt = re.sub(r"\s+", " ", " ".join(chunks_one)).strip()
     assert rebuilt == text

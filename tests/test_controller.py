@@ -8,16 +8,22 @@ from kookie.controller import PlaybackController, PlaybackState
 
 
 class _BackendOK:
+    def __init__(self) -> None:
+        self.received_voice: str | None = None
+
     def synthesize_sentences(self, sentences, voice):
+        self.received_voice = voice
         for sentence in sentences:
-            assert voice == "af_sarah"
             yield np.full(max(4, len(sentence)), 0.1, dtype=np.float32)
 
 
 class _BackendSlow:
+    def __init__(self) -> None:
+        self.received_voice: str | None = None
+
     def synthesize_sentences(self, sentences, voice):
+        self.received_voice = voice
         for sentence in sentences:
-            assert voice == "af_sarah"
             time.sleep(0.05)
             yield np.full(max(4, len(sentence)), 0.1, dtype=np.float32)
 
@@ -41,13 +47,15 @@ def test_playback_controller_start_stop_idempotency() -> None:
 
 def test_playback_controller_processes_queue_and_returns_to_idle() -> None:
     player = _AudioPlayer()
-    controller = PlaybackController(backend=_BackendOK(), audio_player=player)
+    backend = _BackendOK()
+    controller = PlaybackController(backend=backend, audio_player=player)
 
     assert controller.start("one. two.") is True
     controller.wait_until_idle(timeout=2.0)
 
     assert len(player.writes) >= 2
     assert controller.state is PlaybackState.IDLE
+    assert backend.received_voice == "af_sarah"
 
 
 def test_playback_controller_reports_worker_errors() -> None:
