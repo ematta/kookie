@@ -14,8 +14,8 @@ from PyInstaller.utils.hooks import (
 project_root = Path(SPECPATH).resolve().parent
 libespeak_rel = "libs/libespeak-ng.dylib"
 espeak_data_rel = "libs/espeak-ng-data"
-model_rel = "assets/kokoro-v0_19.onnx"
-voices_rel = "assets/voices.bin"
+model_rel = "assets/kokoro-v1.0.onnx"
+voices_rel = "assets/voices-v1.0.bin"
 app_icon_rel = "kookie.png"
 block_cipher = None
 DYNAMIC_IMPORT_PACKAGES = ["pymupdf"]
