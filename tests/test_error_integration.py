@@ -3,18 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from urllib.error import URLError
 
+from conftest import _AudioPlayer
 from kookie.app import create_app
 from kookie.config import AppConfig
-
-
-class _AudioPlayer:
-    def play_from_queue(self, audio_queue, stop_event):
-        while True:
-            chunk = audio_queue.get(timeout=1.0)
-            if chunk is None:
-                return
-            if stop_event.is_set():
-                return
+from kookie.pdf_import import PdfImportResult
 
 
 def test_save_mp3_shows_categorized_filesystem_error(tmp_path: Path, monkeypatch) -> None:

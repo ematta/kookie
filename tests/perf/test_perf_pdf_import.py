@@ -22,7 +22,7 @@ def test_pdf_import_performance_standard_text() -> None:
         
     mock_doc.__getitem__.side_effect = lambda idx: pages[idx]
     
-    with patch("importlib.import_module") as mock_import:
+    with patch("kookie.pdf_import.importlib.import_module") as mock_import:
         mock_pymupdf = MagicMock()
         mock_pymupdf.open.return_value = mock_doc
         mock_import.return_value = mock_pymupdf

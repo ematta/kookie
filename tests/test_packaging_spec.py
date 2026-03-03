@@ -18,8 +18,8 @@ def test_pyinstaller_spec_contains_required_assets_and_hooks() -> None:
     required_tokens = [
         "libs/libespeak-ng.dylib",
         "libs/espeak-ng-data",
-        "assets/kokoro-v0_19.onnx",
-        "assets/voices.bin",
+        "assets/kokoro-v1.0.onnx",
+        "assets/voices-v1.0.bin",
         "collect_data_files",
         "collect_dynamic_libs",
         "collect_submodules",

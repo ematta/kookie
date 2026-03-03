@@ -9,8 +9,8 @@ from kookie.editor_prefs import (
 )
 
 
-def test_prefs_path_is_parent_of_asset_dir() -> None:
-    asset_dir = Path("/tmp/kookie/assets")
+def test_prefs_path_is_inside_asset_dir() -> None:
+    asset_dir = Path("/tmp/kookie")
     assert prefs_path_for_asset_dir(asset_dir) == Path("/tmp/kookie/editor_prefs.json")
 
 

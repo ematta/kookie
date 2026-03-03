@@ -1,0 +1,9 @@
+[
+  {
+    "label": "Run Tests",
+    "command": "uv",
+    "args": ["run", "pytest"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": true,
+  },
+]

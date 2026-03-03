@@ -66,6 +66,10 @@ class PlaybackController:
         self.last_error: Exception | None = None
 
     @property
+    def queue_timeout(self) -> float:
+        return self._queue_timeout
+
+    @property
     def state(self) -> PlaybackState:
         with self._lock:
             return self._state
@@ -287,18 +291,14 @@ class PlaybackController:
 
     def _play_audio_queue(self) -> None:
         assert self._audio_queue is not None
-        try:
-            self.audio_player.play_from_queue(
-                self._audio_queue,
-                self._stop_event,
-                pause_event=self._pause_event,
-                volume_getter=self._get_volume,
-                on_progress=self._on_audio_progress,
-                consume_seek_samples=self._consume_seek_samples,
-            )
-        except TypeError:
-            # Backward compatibility for older test doubles/custom players.
-            self.audio_player.play_from_queue(self._audio_queue, self._stop_event)
+        self.audio_player.play_from_queue(
+            self._audio_queue,
+            self._stop_event,
+            pause_event=self._pause_event,
+            volume_getter=self._get_volume,
+            on_progress=self._on_audio_progress,
+            consume_seek_samples=self._consume_seek_samples,
+        )
 
     def _synthesize_chunks(self, sentences: list[str], voice: str):
         try:

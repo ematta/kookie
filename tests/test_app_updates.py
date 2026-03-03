@@ -2,19 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from conftest import _AudioPlayer
 from kookie.app import create_app
 from kookie.config import AppConfig
 from kookie.update_checker import UpdateInfo
-
-
-class _AudioPlayer:
-    def play_from_queue(self, audio_queue, stop_event):
-        while True:
-            chunk = audio_queue.get(timeout=1.0)
-            if chunk is None:
-                return
-            if stop_event.is_set():
-                return
 
 
 def test_runtime_check_for_updates_noop_when_disabled(tmp_path: Path) -> None:

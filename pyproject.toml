@@ -71,3 +71,8 @@ warn_return_any = true
 warn_unused_ignores = true
 strict_optional = true
 ignore_missing_imports = true
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.151.9",
+]

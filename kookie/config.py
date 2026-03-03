@@ -5,8 +5,8 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-DEFAULT_MODEL_URL = "https://github.com/hexgrad/kokoro/releases/download/v0.19/kokoro-v0_19.onnx"
-DEFAULT_VOICES_URL = "https://github.com/hexgrad/kokoro/releases/download/v0.19/voices.bin"
+DEFAULT_MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx"
+DEFAULT_VOICES_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
 DEFAULT_CONFIG_FILE = Path.home() / ".config" / "kookie" / "config.toml"
 SUPPORTED_THEMES = {"system", "light", "dark"}
 SUPPORTED_LANGUAGES = {"en", "es"}
@@ -16,12 +16,10 @@ SUPPORTED_LANGUAGES = {"en", "es"}
 class AppConfig:
     config_version: int = 1
     backend_mode: str = "auto"
-    asset_dir: Path = field(
-        default_factory=lambda: Path.home() / "Library" / "Application Support" / "Kookie" / "assets"
-    )
+    asset_dir: Path = field(default_factory=lambda: Path.home() / ".kookie")
     config_file: Path = DEFAULT_CONFIG_FILE
-    model_filename: str = "kokoro-v0_19.onnx"
-    voices_filename: str = "voices.bin"
+    model_filename: str = "kokoro-v1.0.onnx"
+    voices_filename: str = "voices-v1.0.bin"
     model_url: str = DEFAULT_MODEL_URL
     voices_url: str = DEFAULT_VOICES_URL
     model_sha256: str | None = None
@@ -34,9 +32,7 @@ class AppConfig:
     asset_auto_update: bool = True
     asset_manifest_filename: str = "asset_manifest.json"
     telemetry_enabled: bool = False
-    telemetry_file: Path = field(
-        default_factory=lambda: Path.home() / "Library" / "Application Support" / "Kookie" / "telemetry.jsonl"
-    )
+    telemetry_file: Path = field(default_factory=lambda: Path.home() / ".kookie" / "telemetry.jsonl")
     update_check_enabled: bool = True
     update_repo: str = "ematta/kookie"
     language: str = "en"
@@ -81,12 +77,10 @@ class AppConfig:
             asset_dir=asset_dir,
             config_file=Path(os.getenv("KOOKIE_CONFIG_FILE", str(base_cfg.config_file))).expanduser(),
             model_filename=(
-                os.getenv("KOOKIE_MODEL_FILENAME", base_cfg.model_filename).strip()
-                or base_cfg.model_filename
+                os.getenv("KOOKIE_MODEL_FILENAME", base_cfg.model_filename).strip() or base_cfg.model_filename
             ),
             voices_filename=(
-                os.getenv("KOOKIE_VOICES_FILENAME", base_cfg.voices_filename).strip()
-                or base_cfg.voices_filename
+                os.getenv("KOOKIE_VOICES_FILENAME", base_cfg.voices_filename).strip() or base_cfg.voices_filename
             ),
             model_url=os.getenv("KOOKIE_MODEL_URL", base_cfg.model_url).strip() or DEFAULT_MODEL_URL,
             voices_url=os.getenv("KOOKIE_VOICES_URL", base_cfg.voices_url).strip() or DEFAULT_VOICES_URL,
@@ -115,9 +109,7 @@ class AppConfig:
                 os.getenv("KOOKIE_TELEMETRY_ENABLED"),
                 default=base_cfg.telemetry_enabled,
             ),
-            telemetry_file=Path(
-                os.getenv("KOOKIE_TELEMETRY_FILE", str(base_cfg.telemetry_file))
-            ).expanduser(),
+            telemetry_file=Path(os.getenv("KOOKIE_TELEMETRY_FILE", str(base_cfg.telemetry_file))).expanduser(),
             update_check_enabled=_safe_bool(
                 os.getenv("KOOKIE_UPDATE_CHECK_ENABLED"),
                 default=base_cfg.update_check_enabled,

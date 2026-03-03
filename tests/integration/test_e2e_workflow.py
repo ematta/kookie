@@ -4,19 +4,10 @@ from pathlib import Path
 
 import pytest
 
+from conftest import _AudioPlayer
 from kookie.app import create_app
 from kookie.config import AppConfig
 from kookie.pdf_import import PdfImportResult
-
-
-class _AudioPlayer:
-    def play_from_queue(self, audio_queue, stop_event):
-        while True:
-            chunk = audio_queue.get(timeout=1.0)
-            if chunk is None:
-                return
-            if stop_event.is_set():
-                return
 
 
 @pytest.mark.integration
