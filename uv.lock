@@ -367,6 +367,11 @@ dev = [
     { name = "ruff" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "hypothesis" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.130.0" },
@@ -388,6 +393,9 @@ requires-dist = [
     { name = "sounddevice", specifier = ">=0.4.7" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "hypothesis", specifier = ">=6.151.9" }]
 
 [[package]]
 name = "language-tags"
