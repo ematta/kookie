@@ -2,6 +2,7 @@ import time
 
 import numpy as np
 
+from conftest import _AudioPlayer
 from kookie.controller import PlaybackController, PlaybackState
 
 
@@ -24,20 +25,6 @@ class _BackendError:
     def synthesize_sentences(self, sentences, voice):
         raise RuntimeError("synthesis exploded")
         yield  # pragma: no cover
-
-
-class _AudioPlayer:
-    def __init__(self):
-        self.writes = []
-
-    def play_from_queue(self, audio_queue, stop_event):
-        while True:
-            chunk = audio_queue.get(timeout=1.0)
-            if chunk is None:
-                return
-            if stop_event.is_set():
-                return
-            self.writes.append(chunk)
 
 
 def test_playback_controller_start_stop_idempotency() -> None:

@@ -3,36 +3,10 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+from conftest import _AudioPlayer
 from kookie.app import create_app
 from kookie.config import AppConfig
 from kookie.controller import PlaybackState
-
-
-class _AudioPlayer:
-    sample_rate = 24_000
-
-    def play_from_queue(
-        self,
-        audio_queue,
-        stop_event,
-        pause_event=None,
-        volume_getter=None,
-        on_progress=None,
-        consume_seek_samples=None,
-    ):
-        while True:
-            if stop_event.is_set():
-                return
-            if pause_event is not None and pause_event.is_set():
-                time.sleep(0.005)
-                continue
-            chunk = audio_queue.get(timeout=1.0)
-            if chunk is None:
-                return
-            if consume_seek_samples is not None:
-                consume_seek_samples()
-            if on_progress is not None:
-                on_progress(len(chunk))
 
 
 def test_runtime_exposes_volume_speed_and_progress_controls(tmp_path: Path) -> None:

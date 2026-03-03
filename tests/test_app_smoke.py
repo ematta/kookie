@@ -1,16 +1,8 @@
+from conftest import _AudioPlayer
+
 from kookie.app import create_app
 from kookie.config import AppConfig
 from kookie.controller import PlaybackState
-
-
-class _AudioPlayer:
-    def play_from_queue(self, audio_queue, stop_event):
-        while True:
-            chunk = audio_queue.get(timeout=1.0)
-            if chunk is None:
-                return
-            if stop_event.is_set():
-                return
 
 
 def test_create_app_mock_backend_smoke(tmp_path) -> None:

@@ -1,18 +1,9 @@
 from pathlib import Path
 
+from conftest import _AudioPlayer
 from kookie.app import create_app
 from kookie.config import AppConfig
 from kookie.controller import ControllerEvent, PlaybackState
-
-
-class _AudioPlayer:
-    def play_from_queue(self, audio_queue, stop_event):
-        while True:
-            chunk = audio_queue.get(timeout=1.0)
-            if chunk is None:
-                return
-            if stop_event.is_set():
-                return
 
 
 def test_status_bar_first_item_reports_missing_voice(tmp_path: Path) -> None:
