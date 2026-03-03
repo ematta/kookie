@@ -1,3 +1,4 @@
+import threading
 import time
 
 import numpy as np
@@ -51,17 +52,22 @@ def test_playback_controller_processes_queue_and_returns_to_idle() -> None:
 
 def test_playback_controller_reports_worker_errors() -> None:
     events = []
+    error_event = threading.Event()
+
+    def on_event(e):
+        events.append(e)
+        if e.kind == "error":
+            error_event.set()
+
     controller = PlaybackController(
         backend=_BackendError(),
         audio_player=_AudioPlayer(),
-        on_event=events.append,
+        on_event=on_event,
     )
 
     assert controller.start("boom") is True
 
-    deadline = time.time() + 2.0
-    while time.time() < deadline and controller.state is not PlaybackState.ERROR:
-        time.sleep(0.01)
+    error_event.wait(timeout=2.0)
 
     assert controller.state is PlaybackState.ERROR
     assert controller.last_error is not None

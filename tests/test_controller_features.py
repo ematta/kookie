@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import time
 
 import numpy as np
@@ -17,12 +18,16 @@ class _BackendSlow:
 
 
 def test_playback_controller_pause_and_resume() -> None:
-    controller = PlaybackController(backend=_BackendSlow(), audio_player=_AudioPlayer())
+    playing_event = threading.Event()
+
+    def on_event(e):
+        if e.state in {PlaybackState.PLAYING, PlaybackState.PAUSED}:
+            playing_event.set()
+
+    controller = PlaybackController(backend=_BackendSlow(), audio_player=_AudioPlayer(), on_event=on_event)
     assert controller.start("one. two. three.") is True
 
-    deadline = time.time() + 2.0
-    while time.time() < deadline and controller.state not in {PlaybackState.PLAYING, PlaybackState.PAUSED}:
-        time.sleep(0.01)
+    playing_event.wait(timeout=2.0)
 
     assert controller.pause() is True
     assert controller.state is PlaybackState.PAUSED
