@@ -72,3 +72,48 @@ def test_playback_controller_reports_worker_errors() -> None:
     assert controller.state is PlaybackState.ERROR
     assert controller.last_error is not None
     assert any(event.kind == "error" for event in events)
+
+
+def test_pause_when_idle_returns_false() -> None:
+    controller = PlaybackController(backend=_BackendOK(), audio_player=_AudioPlayer())
+    assert controller.pause() is False
+
+
+def test_resume_when_not_paused_returns_false() -> None:
+    controller = PlaybackController(backend=_BackendOK(), audio_player=_AudioPlayer())
+    assert controller.resume() is False
+
+
+def test_seek_negative_seconds_returns_false() -> None:
+    controller = PlaybackController(backend=_BackendOK(), audio_player=_AudioPlayer())
+    assert controller.seek(seconds=-1) is False
+
+
+def test_seek_zero_seconds_returns_false() -> None:
+    controller = PlaybackController(backend=_BackendOK(), audio_player=_AudioPlayer())
+    assert controller.seek(seconds=0) is False
+
+
+def test_seek_when_idle_returns_false() -> None:
+    controller = PlaybackController(backend=_BackendOK(), audio_player=_AudioPlayer())
+    assert controller.seek(seconds=1.0) is False
+
+
+def test_set_playback_speed_clamps_below_minimum() -> None:
+    controller = PlaybackController(backend=_BackendOK(), audio_player=_AudioPlayer())
+    assert controller.set_playback_speed(0.0) == 0.5
+
+
+def test_set_playback_speed_clamps_above_maximum() -> None:
+    controller = PlaybackController(backend=_BackendOK(), audio_player=_AudioPlayer())
+    assert controller.set_playback_speed(5.0) == 2.0
+
+
+def test_set_volume_clamps_below_zero() -> None:
+    controller = PlaybackController(backend=_BackendOK(), audio_player=_AudioPlayer())
+    assert controller.set_volume(-1.0) == 0.0
+
+
+def test_set_volume_clamps_above_one() -> None:
+    controller = PlaybackController(backend=_BackendOK(), audio_player=_AudioPlayer())
+    assert controller.set_volume(2.0) == 1.0
