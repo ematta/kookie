@@ -23,6 +23,7 @@ from .preload import preload_assets
 from .telemetry import LocalTelemetry
 from .text_processing import normalize_text
 from .update_checker import UpdateInfo, check_for_update
+from .web_import import WebImportError, WebImportResult, fetch_webpage_text
 
 
 class StartupPrompt(TypedDict):
@@ -59,6 +60,14 @@ class AppRuntime:
         repr=False,
     )
     _is_loading_pdf: bool = field(default=False, init=False, repr=False)
+    _webpage_load_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    _webpage_load_thread: threading.Thread | None = field(default=None, init=False, repr=False)
+    _webpage_load_results: queue.Queue[tuple[str | None, str | None, Exception | None]] = field(
+        default_factory=queue.Queue,
+        init=False,
+        repr=False,
+    )
+    _is_loading_webpage: bool = field(default=False, init=False, repr=False)
     telemetry: LocalTelemetry | None = field(default=None, repr=False)
     metrics: MetricsStore = field(default_factory=MetricsStore, repr=False)
     _health_server: object | None = field(default=None, init=False, repr=False)
@@ -346,6 +355,82 @@ class AppRuntime:
             self._pdf_load_results.put((result.text, pdf_path, result.used_ocr, None))
         except Exception as exc:
             self._pdf_load_results.put((None, pdf_path, False, exc))
+
+    @property
+    def is_loading_webpage(self) -> bool:
+        with self._webpage_load_lock:
+            return self._is_loading_webpage
+
+    def start_webpage_load(
+        self,
+        url: str,
+        *,
+        fetcher=None,
+    ) -> bool:
+        selected_fetcher = fetcher if fetcher is not None else fetch_webpage_text
+        with self._webpage_load_lock:
+            if self._is_loading_webpage:
+                self.status_message = "URL load is already in progress."
+                return False
+
+            self._clear_webpage_load_results()
+            self._is_loading_webpage = True
+            self.status_message = "Loading URL..."
+            load_thread = threading.Thread(
+                target=self._run_webpage_load_worker,
+                kwargs={"url": url, "fetcher": selected_fetcher},
+                daemon=True,
+                name="kookie-load-webpage",
+            )
+            self._webpage_load_thread = load_thread
+
+        load_thread.start()
+        return True
+
+    def poll_webpage_load(self) -> tuple[str | None, str | None]:
+        latest_result: tuple[str | None, str | None, Exception | None] | None = None
+        while True:
+            try:
+                latest_result = self._webpage_load_results.get_nowait()
+            except queue.Empty:
+                break
+
+        if latest_result is None:
+            return None, None
+
+        text, url, error = latest_result
+
+        with self._webpage_load_lock:
+            self._is_loading_webpage = False
+            self._webpage_load_thread = None
+
+        if error is not None:
+            categorized = classify_exception(error)
+            self.status_message = f"Unable to load URL: {to_user_message(categorized)}"
+            self.metrics.increment("webpage_load_failed")
+            return None, None
+
+        if text is not None and url is not None:
+            self.set_text(text)
+            self.status_message = f"Loaded URL: {url}"
+            self.metrics.increment("webpage_loaded")
+            return text, url
+
+        return None, None
+
+    def _clear_webpage_load_results(self) -> None:
+        while True:
+            try:
+                self._webpage_load_results.get_nowait()
+            except queue.Empty:
+                return
+
+    def _run_webpage_load_worker(self, *, url: str, fetcher) -> None:
+        try:
+            result = fetcher(url)
+            self._webpage_load_results.put((result.text, result.url, None))
+        except Exception as exc:
+            self._webpage_load_results.put((None, url, exc))
 
     def wait_until_idle(self, timeout: float = 5.0) -> None:
         self.controller.wait_until_idle(timeout=timeout)

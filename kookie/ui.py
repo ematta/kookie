@@ -497,6 +497,39 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             editor_controls.add_widget(self.word_wrap_toggle)
             root.add_widget(editor_controls)
 
+            url_bar = BoxLayout(
+                orientation="horizontal",
+                size_hint_y=None,
+                height=46,
+                spacing=8,
+                padding=[8, 5, 8, 5],
+            )
+            self._paint_background(url_bar, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
+            self.url_input = TextInput(
+                hint_text="Enter a URL to load webpage text...",
+                multiline=False,
+                size_hint_x=1,
+                size_hint_y=1,
+                font_size=14,
+                write_tab=False,
+                background_normal="",
+                background_active="",
+                background_disabled_normal="",
+                foreground_color=TEXT_FOREGROUND_COLOR,
+                background_color=TEXT_BACKGROUND_COLOR,
+                padding=[10, 8, 10, 8],
+            )
+            self.url_load_btn = Button(
+                text="Load URL",
+                size_hint=(None, 1),
+                width=100,
+                **_control_style(background_color=PRIMARY_BUTTON_COLOR),
+            )
+            self.url_load_btn.bind(on_press=lambda *_: self._on_load_url())
+            url_bar.add_widget(self.url_input)
+            url_bar.add_widget(self.url_load_btn)
+            root.add_widget(url_bar)
+
             self.editor_scroll = ScrollView(**_scroll_view_config(word_wrap=self.editor_prefs.word_wrap))
             self.text_input = TextInput(
                 **_text_input_config(
@@ -647,6 +680,16 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             runtime.start_pdf_load(selected_path)
             self._sync_now()
 
+        def _on_load_url(self) -> None:
+            url = self.url_input.text.strip()
+            if not url:
+                runtime.status_message = "Enter a URL in the address bar."
+                self._sync_now()
+                return
+
+            runtime.start_webpage_load(url)
+            self._sync_now()
+
         def _on_play(self) -> None:
             runtime.set_text(self.text_input.text)
             runtime.play()
@@ -747,22 +790,28 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
 
         def _sync_now(self) -> None:
             runtime.poll_mp3_save()
-            
+
             loaded_text, pdf_path = runtime.poll_pdf_load()
             if loaded_text is not None and pdf_path is not None:
                 self._recent_files = _update_recent_files(self._recent_files, str(pdf_path))
                 self.text_input.text = loaded_text
                 self._sync_text_input_size()
 
+            webpage_text, webpage_url = runtime.poll_webpage_load()
+            if webpage_text is not None and webpage_url is not None:
+                self.text_input.text = webpage_text
+                self._sync_text_input_size()
+
             is_saving = runtime.is_saving_mp3
-            is_loading = runtime.is_loading_pdf
-            
+            is_loading = runtime.is_loading_pdf or runtime.is_loading_webpage
+
             self.save_btn.disabled = is_saving or is_loading
             self.play_btn.disabled = is_saving or is_loading
             self.load_btn.disabled = is_saving or is_loading
-            
+            self.url_load_btn.disabled = is_saving or is_loading
+
             self.pause_btn.text = "Resume" if runtime.controller.state is PlaybackState.PAUSED else "Pause"
-            
+
             if is_saving:
                 self.save_spinner.text = _save_spinner_text(is_saving=is_saving, tick=self._save_spinner_tick)
                 self._save_spinner_tick += 1
