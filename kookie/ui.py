@@ -18,29 +18,32 @@ from .editor_prefs import (
 )
 
 TEXT_FOREGROUND_COLOR = (0.10, 0.12, 0.15, 1.0)
-TEXT_BACKGROUND_COLOR = (0.94, 0.95, 0.97, 1.0)
+TEXT_BACKGROUND_COLOR = (0.96, 0.97, 0.98, 1.0)
 TEXT_SELECTION_COLOR = (0.70, 0.82, 0.98, 0.70)
 TEXT_CURSOR_COLOR = (0.17, 0.40, 0.85, 1.0)
 SAVE_SPINNER_FRAMES = ("|", "/", "-", "\\")
 LOAD_SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
-APP_BACKGROUND_COLOR = (0.07, 0.10, 0.15, 1.0)
-TOOLBAR_BACKGROUND_COLOR = (0.14, 0.18, 0.25, 1.0)
-CONTROL_SURFACE_COLOR = (0.21, 0.26, 0.34, 1.0)
-PRIMARY_BUTTON_COLOR = (0.19, 0.52, 0.75, 1.0)
-SUCCESS_BUTTON_COLOR = (0.22, 0.56, 0.39, 1.0)
-DANGER_BUTTON_COLOR = (0.70, 0.30, 0.29, 1.0)
+APP_BACKGROUND_COLOR = (0.08, 0.09, 0.12, 1.0)
+TOOLBAR_BACKGROUND_COLOR = (0.13, 0.15, 0.20, 1.0)
+CONTROL_SURFACE_COLOR = (0.22, 0.25, 0.32, 1.0)
+PRIMARY_BUTTON_COLOR = (0.24, 0.56, 0.82, 1.0)
+SUCCESS_BUTTON_COLOR = (0.20, 0.60, 0.42, 1.0)
+DANGER_BUTTON_COLOR = (0.78, 0.28, 0.28, 1.0)
 CONTROL_TEXT_COLOR = (0.96, 0.98, 1.0, 1.0)
-STATUS_TEXT_COLOR = (0.90, 0.93, 0.98, 1.0)
+STATUS_TEXT_COLOR = (0.78, 0.82, 0.90, 1.0)
+CONTROL_FONT_SIZE = 20
+STATUS_FONT_SIZE = 17
+URL_INPUT_FONT_SIZE = 18
 STATUS_VOICE_MAX_CHARS = 24
 STATUS_BACKEND_MAX_CHARS = 28
 STATUS_ACTIVITY_MAX_CHARS = 72
 APP_ICON_FILENAME = "kookie.png"
-STATUS_HEADER_HEIGHT = 30
-STATUS_ACTIVITY_ROW_MIN_HEIGHT = 30
-STATUS_PROGRESS_ROW_MIN_HEIGHT = 30
-STATUS_RECENT_ROW_MIN_HEIGHT = 30
-STATUS_BAR_ROW_SPACING = 4
-STATUS_BAR_PADDING = (10, 8, 10, 8)
+STATUS_HEADER_HEIGHT = 36
+STATUS_ACTIVITY_ROW_MIN_HEIGHT = 36
+STATUS_PROGRESS_ROW_MIN_HEIGHT = 36
+STATUS_RECENT_ROW_MIN_HEIGHT = 36
+STATUS_BAR_ROW_SPACING = 6
+STATUS_BAR_PADDING = (14, 10, 14, 10)
 STATUS_BAR_VERTICAL_PADDING = STATUS_BAR_PADDING[1] + STATUS_BAR_PADDING[3]
 STATUS_BAR_HEIGHT = (
     STATUS_HEADER_HEIGHT
@@ -72,7 +75,7 @@ def _text_input_config(initial_text: str, *, prefs: EditorPreferences) -> dict[s
         "background_color": TEXT_BACKGROUND_COLOR,
         "selection_color": TEXT_SELECTION_COLOR,
         "cursor_color": TEXT_CURSOR_COLOR,
-        "padding": [14, 14, 14, 14],
+        "padding": [16, 16, 16, 16],
     }
 
 
@@ -136,6 +139,7 @@ def _status_label_config() -> dict[str, object]:
         "shorten_from": "center",
         "max_lines": 1,
         "color": STATUS_TEXT_COLOR,
+        "font_size": STATUS_FONT_SIZE,
     }
 
 
@@ -165,6 +169,7 @@ def _control_style(*, background_color: tuple[float, float, float, float]) -> di
         "background_disabled_down": "",
         "background_color": background_color,
         "color": CONTROL_TEXT_COLOR,
+        "font_size": CONTROL_FONT_SIZE,
     }
 
 
@@ -458,38 +463,38 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             elif dark_mode:
                 Window.clearcolor = APP_BACKGROUND_COLOR
             else:
-                Window.clearcolor = (0.95, 0.96, 0.98, 1.0)
-            root = BoxLayout(orientation="vertical", spacing=12, padding=[18, 14, 18, 14])
+                Window.clearcolor = (0.94, 0.95, 0.97, 1.0)
+            root = BoxLayout(orientation="vertical", spacing=14, padding=[20, 16, 20, 16])
 
             self.editor_prefs = load_editor_preferences(runtime.config.asset_dir)
 
             editor_controls = BoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
-                height=50,
-                spacing=8,
-                padding=[8, 6, 8, 6],
+                height=60,
+                spacing=10,
+                padding=[12, 8, 12, 8],
             )
             self._paint_background(editor_controls, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
             self.font_picker = Spinner(
                 text=self.editor_prefs.font_name,
                 values=list(CURATED_FONT_NAMES),
                 size_hint=(None, 1),
-                width=210,
+                width=240,
                 **_control_style(background_color=CONTROL_SURFACE_COLOR),
             )
             self.font_size_picker = Spinner(
                 text=str(self.editor_prefs.font_size),
                 values=[str(size) for size in EDITOR_FONT_SIZES],
                 size_hint=(None, 1),
-                width=110,
+                width=120,
                 **_control_style(background_color=CONTROL_SURFACE_COLOR),
             )
             self.word_wrap_toggle = ToggleButton(
                 text=self._wrap_label(self.editor_prefs.word_wrap),
                 state="down" if self.editor_prefs.word_wrap else "normal",
                 size_hint=(None, 1),
-                width=160,
+                width=180,
                 **_control_style(background_color=PRIMARY_BUTTON_COLOR),
             )
             editor_controls.add_widget(self.font_picker)
@@ -500,9 +505,9 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             url_bar = BoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
-                height=46,
-                spacing=8,
-                padding=[8, 5, 8, 5],
+                height=56,
+                spacing=10,
+                padding=[12, 8, 12, 8],
             )
             self._paint_background(url_bar, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
             self.url_input = TextInput(
@@ -510,19 +515,19 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 multiline=False,
                 size_hint_x=1,
                 size_hint_y=1,
-                font_size=14,
+                font_size=URL_INPUT_FONT_SIZE,
                 write_tab=False,
                 background_normal="",
                 background_active="",
                 background_disabled_normal="",
                 foreground_color=TEXT_FOREGROUND_COLOR,
                 background_color=TEXT_BACKGROUND_COLOR,
-                padding=[10, 8, 10, 8],
+                padding=[12, 10, 12, 10],
             )
             self.url_load_btn = Button(
                 text="Load URL",
                 size_hint=(None, 1),
-                width=100,
+                width=130,
                 **_control_style(background_color=PRIMARY_BUTTON_COLOR),
             )
             self.url_load_btn.bind(on_press=lambda *_: self._on_load_url())
@@ -556,9 +561,9 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             controls = BoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
-                height=58,
-                spacing=10,
-                padding=[8, 7, 8, 7],
+                height=68,
+                spacing=12,
+                padding=[12, 8, 12, 8],
             )
             self._paint_background(controls, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
             self.load_btn = Button(text=self._("Load PDF"), **_control_style(background_color=CONTROL_SURFACE_COLOR))
@@ -570,18 +575,18 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 text=runtime.selected_voice,
                 values=runtime.available_voices(),
                 size_hint=(None, 1),
-                width=120,
+                width=160,
                 **_control_style(background_color=CONTROL_SURFACE_COLOR),
             )
             self.speed_picker = Spinner(
                 text="1.0x",
                 values=["0.5x", "1.0x", "1.5x", "2.0x"],
                 size_hint=(None, 1),
-                width=90,
+                width=110,
                 **_control_style(background_color=CONTROL_SURFACE_COLOR),
             )
-            self.volume_slider = Slider(min=0.0, max=1.0, value=1.0, size_hint=(None, 1), width=120)
-            self.save_spinner = Label(text="", size_hint=(None, 1), width=140, **_status_label_config())
+            self.volume_slider = Slider(min=0.0, max=1.0, value=1.0, size_hint=(None, 1), width=140)
+            self.save_spinner = Label(text="", size_hint=(None, 1), width=180, **_status_label_config())
             self._bind_label_text_size(self.save_spinner)
             self.load_btn.bind(on_press=lambda *_: self._on_load_pdf())
             self.play_btn.bind(on_press=lambda *_: self._on_play())
@@ -617,7 +622,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 orientation="horizontal",
                 size_hint_y=None,
                 height=STATUS_HEADER_HEIGHT,
-                spacing=10,
+                spacing=14,
             )
             self.voice_status = Label(text="", size_hint_x=0.42, **_status_label_config())
             self.backend_status = Label(text="", size_hint_x=0.58, **_status_label_config())
