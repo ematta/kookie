@@ -40,7 +40,7 @@ def test_run_preloads_assets_before_normal_launch(monkeypatch, tmp_path) -> None
     monkeypatch.setattr("kookie.app.load_config", lambda: cfg)
     monkeypatch.setattr("kookie.app.preload_assets", fake_preload, raising=False)
     monkeypatch.setattr("kookie.app.create_app", fake_create)
-    monkeypatch.setattr("kookie.ui.run_kivy_ui", fake_ui)
+    monkeypatch.setattr("kookie.ui.run_pyqt_ui", fake_ui)
 
     run()
 
@@ -81,7 +81,7 @@ def test_run_launches_mock_when_preload_fails_and_user_continues(monkeypatch, tm
     monkeypatch.setattr("kookie.app.load_config", lambda: cfg)
     monkeypatch.setattr("kookie.app.preload_assets", fake_preload, raising=False)
     monkeypatch.setattr("kookie.app.create_app", fake_create)
-    monkeypatch.setattr("kookie.ui.run_kivy_ui", fake_ui)
+    monkeypatch.setattr("kookie.ui.run_pyqt_ui", fake_ui)
 
     run()
 
@@ -120,7 +120,7 @@ def test_run_stops_when_preload_fails_and_user_quits(monkeypatch, tmp_path) -> N
     monkeypatch.setattr("kookie.app.load_config", lambda: cfg)
     monkeypatch.setattr("kookie.app.preload_assets", fake_preload, raising=False)
     monkeypatch.setattr("kookie.app.create_app", fake_create)
-    monkeypatch.setattr("kookie.ui.run_kivy_ui", fake_ui)
+    monkeypatch.setattr("kookie.ui.run_pyqt_ui", fake_ui)
 
     run()
 
@@ -163,7 +163,7 @@ def test_run_retries_preload_when_requested(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr("kookie.app.load_config", lambda: cfg)
     monkeypatch.setattr("kookie.app.preload_assets", fake_preload, raising=False)
     monkeypatch.setattr("kookie.app.create_app", fake_create)
-    monkeypatch.setattr("kookie.ui.run_kivy_ui", fake_ui)
+    monkeypatch.setattr("kookie.ui.run_pyqt_ui", fake_ui)
 
     run()
 

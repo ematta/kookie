@@ -11,7 +11,6 @@ from kookie.ui import (
     STATUS_RECENT_ROW_MIN_HEIGHT,
     TEXT_FOREGROUND_COLOR,
     _app_icon_path,
-    _label_text_size_for_width,
     _save_spinner_text,
     _scroll_view_config,
     _status_display_items,
@@ -30,25 +29,18 @@ def test_text_foreground_color_is_readable_dark_tone() -> None:
     assert max(r, g, b) < 0.35
 
 
-def test_scroll_view_config_shows_right_bar_with_wrap_enabled() -> None:
+def test_scroll_view_config_vertical_scrollbar_always_enabled() -> None:
     cfg = _scroll_view_config(word_wrap=True)
-    assert cfg["scroll_type"] == ["bars", "content"]
-    assert cfg["bar_width"] > 0
-    assert cfg["bar_pos_y"] == "right"
-    assert cfg["do_scroll_y"] is True
-    assert cfg["do_scroll_x"] is False
+    assert cfg["vertical_scrollbar"] is True
+    assert cfg["horizontal_scrollbar"] is False
+    assert cfg["word_wrap"] is True
 
 
 def test_scroll_view_config_enables_horizontal_scroll_when_wrap_disabled() -> None:
     cfg = _scroll_view_config(word_wrap=False)
-    assert cfg["do_scroll_y"] is True
-    assert cfg["do_scroll_x"] is True
-
-
-def test_scroll_view_config_enables_smoother_mouse_wheel_motion() -> None:
-    cfg = _scroll_view_config(word_wrap=True)
-    assert cfg["scroll_wheel_distance"] == "12sp"
-    assert cfg["smooth_scroll_end"] == 10
+    assert cfg["vertical_scrollbar"] is True
+    assert cfg["horizontal_scrollbar"] is True
+    assert cfg["word_wrap"] is False
 
 
 def test_save_spinner_text_cycles_frames() -> None:
@@ -80,13 +72,13 @@ def test_status_display_items_truncates_long_activity_message() -> None:
     assert "..." in display_items[2]
 
 
-def test_status_label_config_uses_single_line_shortening() -> None:
+def test_status_label_config_uses_single_line_with_elision() -> None:
     cfg = _status_label_config()
 
-    assert cfg["halign"] == "left"
-    assert cfg["valign"] == "middle"
-    assert cfg["shorten"] is True
-    assert cfg["shorten_from"] == "center"
+    assert cfg["alignment"] == "left"
+    assert cfg["vertical_alignment"] == "center"
+    assert cfg["elide"] is True
+    assert cfg["elide_mode"] == "middle"
     assert cfg["max_lines"] == 1
 
 
@@ -105,10 +97,6 @@ def test_status_layout_reserves_enough_vertical_space_for_all_rows() -> None:
     assert STATUS_HEADER_HEIGHT >= 34
     assert STATUS_ACTIVITY_ROW_MIN_HEIGHT >= 34
     assert STATUS_BAR_HEIGHT >= minimum_content_height
-
-
-def test_label_text_size_tracks_width_without_forcing_height() -> None:
-    assert _label_text_size_for_width(320) == (320, None)
 
 
 def test_update_recent_files_deduplicates_and_caps_list() -> None:
@@ -142,18 +130,16 @@ def test_app_icon_path_returns_none_when_png_missing(tmp_path) -> None:
 
 
 def test_control_font_size_is_at_least_20() -> None:
-    size = int(str(CONTROL_FONT_SIZE).replace("sp", ""))
-    assert size >= 20
+    assert CONTROL_FONT_SIZE >= 20
 
 
 def test_status_font_size_is_readable() -> None:
-    size = int(str(STATUS_FONT_SIZE).replace("sp", ""))
-    assert size >= 16
+    assert STATUS_FONT_SIZE >= 16
 
 
-def test_font_sizes_use_sp_units_for_retina_scaling() -> None:
+def test_font_sizes_are_integers() -> None:
     from kookie.ui import URL_INPUT_FONT_SIZE
 
-    assert str(CONTROL_FONT_SIZE).endswith("sp"), "CONTROL_FONT_SIZE must use sp units for Retina scaling"
-    assert str(STATUS_FONT_SIZE).endswith("sp"), "STATUS_FONT_SIZE must use sp units for Retina scaling"
-    assert str(URL_INPUT_FONT_SIZE).endswith("sp"), "URL_INPUT_FONT_SIZE must use sp units for Retina scaling"
+    assert isinstance(CONTROL_FONT_SIZE, int), "CONTROL_FONT_SIZE must be an integer"
+    assert isinstance(STATUS_FONT_SIZE, int), "STATUS_FONT_SIZE must be an integer"
+    assert isinstance(URL_INPUT_FONT_SIZE, int), "URL_INPUT_FONT_SIZE must be an integer"
