@@ -142,8 +142,18 @@ def test_app_icon_path_returns_none_when_png_missing(tmp_path) -> None:
 
 
 def test_control_font_size_is_at_least_20() -> None:
-    assert CONTROL_FONT_SIZE >= 20
+    size = int(str(CONTROL_FONT_SIZE).replace("sp", ""))
+    assert size >= 20
 
 
 def test_status_font_size_is_readable() -> None:
-    assert STATUS_FONT_SIZE >= 16
+    size = int(str(STATUS_FONT_SIZE).replace("sp", ""))
+    assert size >= 16
+
+
+def test_font_sizes_use_sp_units_for_retina_scaling() -> None:
+    from kookie.ui import URL_INPUT_FONT_SIZE
+
+    assert str(CONTROL_FONT_SIZE).endswith("sp"), "CONTROL_FONT_SIZE must use sp units for Retina scaling"
+    assert str(STATUS_FONT_SIZE).endswith("sp"), "STATUS_FONT_SIZE must use sp units for Retina scaling"
+    assert str(URL_INPUT_FONT_SIZE).endswith("sp"), "URL_INPUT_FONT_SIZE must use sp units for Retina scaling"

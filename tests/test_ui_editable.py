@@ -10,7 +10,7 @@ def test_text_input_config_is_editable() -> None:
     assert cfg["multiline"] is True
     assert cfg["input_type"] == "text"
     assert cfg["font_name"] == "Roboto"
-    assert cfg["font_size"] == 20
+    assert cfg["font_size"] == "20sp"
     assert cfg["do_wrap"] is True
     assert cfg["write_tab"] is True
     assert cfg["background_normal"] == ""

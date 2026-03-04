@@ -31,9 +31,9 @@ SUCCESS_BUTTON_COLOR = (0.20, 0.60, 0.42, 1.0)
 DANGER_BUTTON_COLOR = (0.78, 0.28, 0.28, 1.0)
 CONTROL_TEXT_COLOR = (0.96, 0.98, 1.0, 1.0)
 STATUS_TEXT_COLOR = (0.78, 0.82, 0.90, 1.0)
-CONTROL_FONT_SIZE = 20
-STATUS_FONT_SIZE = 17
-URL_INPUT_FONT_SIZE = 18
+CONTROL_FONT_SIZE = "20sp"
+STATUS_FONT_SIZE = "17sp"
+URL_INPUT_FONT_SIZE = "18sp"
 STATUS_VOICE_MAX_CHARS = 24
 STATUS_BACKEND_MAX_CHARS = 28
 STATUS_ACTIVITY_MAX_CHARS = 72
@@ -65,7 +65,7 @@ def _text_input_config(initial_text: str, *, prefs: EditorPreferences) -> dict[s
         "disabled": False,
         "input_type": "text",
         "font_name": prefs.font_name,
-        "font_size": prefs.font_size,
+        "font_size": f"{prefs.font_size}sp",
         "do_wrap": prefs.word_wrap,
         "write_tab": True,
         "background_normal": "",
@@ -882,7 +882,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                     word_wrap=self.editor_prefs.word_wrap,
                 )
                 self.text_input.font_name = self.editor_prefs.font_name
-            self.text_input.font_size = self.editor_prefs.font_size
+            self.text_input.font_size = f"{self.editor_prefs.font_size}sp"
             self.text_input.do_wrap = self.editor_prefs.word_wrap
 
             for key, value in _scroll_view_config(self.editor_prefs.word_wrap).items():
