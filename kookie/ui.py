@@ -471,9 +471,9 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             editor_controls = BoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
-                height=60,
+                height=76,
                 spacing=10,
-                padding=[12, 8, 12, 8],
+                padding=[12, 10, 12, 10],
             )
             self._paint_background(editor_controls, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
             self.font_picker = Spinner(
@@ -494,7 +494,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 text=self._wrap_label(self.editor_prefs.word_wrap),
                 state="down" if self.editor_prefs.word_wrap else "normal",
                 size_hint=(None, 1),
-                width=180,
+                width=200,
                 **_control_style(background_color=PRIMARY_BUTTON_COLOR),
             )
             editor_controls.add_widget(self.font_picker)
@@ -505,9 +505,9 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             url_bar = BoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
-                height=56,
+                height=68,
                 spacing=10,
-                padding=[12, 8, 12, 8],
+                padding=[12, 10, 12, 10],
             )
             self._paint_background(url_bar, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
             self.url_input = TextInput(
@@ -527,7 +527,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             self.url_load_btn = Button(
                 text="Load URL",
                 size_hint=(None, 1),
-                width=130,
+                width=150,
                 **_control_style(background_color=PRIMARY_BUTTON_COLOR),
             )
             self.url_load_btn.bind(on_press=lambda *_: self._on_load_url())
@@ -561,9 +561,9 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             controls = BoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
-                height=68,
+                height=80,
                 spacing=12,
-                padding=[12, 8, 12, 8],
+                padding=[12, 10, 12, 10],
             )
             self._paint_background(controls, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
             self.load_btn = Button(text=self._("Load PDF"), **_control_style(background_color=CONTROL_SURFACE_COLOR))
@@ -575,18 +575,18 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 text=runtime.selected_voice,
                 values=runtime.available_voices(),
                 size_hint=(None, 1),
-                width=160,
+                width=190,
                 **_control_style(background_color=CONTROL_SURFACE_COLOR),
             )
             self.speed_picker = Spinner(
                 text="1.0x",
                 values=["0.5x", "1.0x", "1.5x", "2.0x"],
                 size_hint=(None, 1),
-                width=110,
+                width=120,
                 **_control_style(background_color=CONTROL_SURFACE_COLOR),
             )
             self.volume_slider = Slider(min=0.0, max=1.0, value=1.0, size_hint=(None, 1), width=140)
-            self.save_spinner = Label(text="", size_hint=(None, 1), width=180, **_status_label_config())
+            self.save_spinner = Label(text="", size_hint=(None, 1), width=200, **_status_label_config())
             self._bind_label_text_size(self.save_spinner)
             self.load_btn.bind(on_press=lambda *_: self._on_load_pdf())
             self.play_btn.bind(on_press=lambda *_: self._on_play())
