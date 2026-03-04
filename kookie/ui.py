@@ -519,6 +519,8 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             self.url_input = TextInput(
                 hint_text="Enter a URL to load webpage text...",
                 multiline=False,
+                readonly=False,
+                disabled=False,
                 size_hint_x=1,
                 size_hint_y=1,
                 font_size=URL_INPUT_FONT_SIZE,
@@ -528,6 +530,8 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 background_disabled_normal="",
                 foreground_color=TEXT_FOREGROUND_COLOR,
                 background_color=TEXT_BACKGROUND_COLOR,
+                cursor_color=TEXT_CURSOR_COLOR,
+                selection_color=TEXT_SELECTION_COLOR,
                 padding=[12, 10, 12, 10],
             )
             self.url_load_btn = Button(
