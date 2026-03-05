@@ -21,6 +21,10 @@ block_cipher = None
 DYNAMIC_IMPORT_PACKAGES = ["pymupdf"]
 DYNAMIC_IMPORT_ALIASES = ["fitz"]
 
+# Core runtime packages that need explicit library/data collection
+RUNTIME_BINARY_PACKAGES = ["sounddevice", "onnxruntime"]
+RUNTIME_DATA_PACKAGES = ["kivy", "kokoro_onnx"]
+
 
 def optional_data(source_rel: str, destination: str) -> list[tuple[str, str]]:
     path = project_root / source_rel
@@ -101,6 +105,14 @@ dynamic_hiddenimports = optional_dynamic_imports(
     DYNAMIC_IMPORT_ALIASES,
 )
 
+runtime_binaries = []
+for pkg in RUNTIME_BINARY_PACKAGES:
+    runtime_binaries += optional_package_binaries(pkg)
+
+runtime_datas = []
+for pkg in RUNTIME_DATA_PACKAGES:
+    runtime_datas += optional_package_data(pkg)
+
 
 a = Analysis(
     [str(project_root / "main.py")],
@@ -108,6 +120,7 @@ a = Analysis(
     binaries=[
         (str(project_root / libespeak_rel), "."),
     ]
+    + runtime_binaries
     + optional_package_binaries("docling")
     + optional_package_binaries("docling_ibm_models")
     + optional_system_binary("ffmpeg")
@@ -117,6 +130,7 @@ a = Analysis(
         + optional_data(model_rel, "assets")
         + optional_data(voices_rel, "assets")
         + optional_data(app_icon_rel, ".")
+        + runtime_datas
         + optional_package_data("docling")
         + optional_package_data("docling_ibm_models")
     ),
