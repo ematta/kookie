@@ -120,8 +120,8 @@ def get_page_image_bytes(page: object, fmt: str = "png") -> bytes:
 def perform_ocr_on_image_bytes(image_bytes: bytes) -> str:
     """Performs OCR on image bytes using pytesseract and returns the extracted text."""
     try:
-        from PIL import Image
         import pytesseract
+        from PIL import Image
     except ModuleNotFoundError as exc:
         raise PdfImportError("OCR dependencies (pytesseract, pillow) are missing.") from exc
 

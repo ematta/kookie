@@ -3,11 +3,10 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-
 from conftest import _AudioPlayer
+
 from kookie.app import create_app
 from kookie.config import AppConfig
-import kookie.pdf_import
 
 
 @pytest.mark.integration

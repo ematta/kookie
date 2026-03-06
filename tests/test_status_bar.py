@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from conftest import _AudioPlayer
+
 from kookie.app import create_app
 from kookie.config import AppConfig
 from kookie.controller import ControllerEvent, PlaybackState

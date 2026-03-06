@@ -23,7 +23,7 @@ from .preload import preload_assets
 from .telemetry import LocalTelemetry
 from .text_processing import normalize_text
 from .update_checker import UpdateInfo, check_for_update
-from .web_import import WebImportError, WebImportResult, fetch_webpage_text
+from .web_import import fetch_webpage_text
 
 
 class StartupPrompt(TypedDict):

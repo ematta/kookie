@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import io
-from http.client import HTTPMessage
 from unittest.mock import MagicMock
 
 import pytest
