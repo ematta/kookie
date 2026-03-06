@@ -267,6 +267,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "kokoro-onnx" },
+    { name = "mypy" },
     { name = "numpy" },
     { name = "onnxruntime" },
     { name = "pillow" },
@@ -275,6 +276,7 @@ dependencies = [
     { name = "pyqt6" },
     { name = "pytesseract" },
     { name = "pytest" },
+    { name = "ruff" },
     { name = "sounddevice" },
 ]
 
@@ -298,6 +300,7 @@ dev = [
 requires-dist = [
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.130.0" },
     { name = "kokoro-onnx", specifier = ">=0.4.0" },
+    { name = "mypy", specifier = ">=1.19.1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.14.0" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "onnxruntime", specifier = ">=1.18.0" },
@@ -311,6 +314,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.14.0" },
+    { name = "ruff", specifier = ">=0.15.2" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
     { name = "sounddevice", specifier = ">=0.4.7" },
 ]
