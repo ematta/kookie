@@ -470,6 +470,10 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 Window.size = (1280, Window.height)
             if Window.height < 820:
                 Window.size = (Window.width, 820)
+            screen_w, screen_h = Window.system_size
+            win_w, win_h = Window.size
+            Window.left = max(0, (screen_w - win_w) // 2)
+            Window.top = max(0, (screen_h - win_h) // 2)
             root = BoxLayout(orientation="vertical", spacing=14, padding=[20, 16, 20, 16])
 
             self.editor_prefs = load_editor_preferences(runtime.config.asset_dir)
