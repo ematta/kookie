@@ -661,7 +661,7 @@ def run() -> None:
     while True:
         preload_result = preload_assets(config)
 
-        startup_prompt: StartupPrompt | None = None
+        startup_prompt: dict[str, object] | None = None
         runtime_config = config
         if not preload_result.ready:
             runtime_config = replace(config, backend_mode="mock")

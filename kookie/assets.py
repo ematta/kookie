@@ -178,7 +178,7 @@ def download_asset(
 
     try:
         def _fetch_payload() -> bytes:
-            with urlopen(spec.url, timeout=timeout) as response:  # type: ignore[call-arg]
+            with urlopen(spec.url, timeout=timeout) as response:  # type: ignore[attr-defined]
                 total = _content_length(response)
                 downloaded = 0
                 chunks: list[bytes] = []

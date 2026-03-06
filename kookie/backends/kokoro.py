@@ -59,7 +59,7 @@ class KokoroSpeechBackend:
         }
 
     def _create_engine(self):
-        from kokoro_onnx import Kokoro  # type: ignore
+        from kokoro_onnx import Kokoro
 
         try:
             return Kokoro(model_path=str(self.model_path), voices_path=str(self.voices_path))
@@ -82,7 +82,7 @@ class KokoroSpeechBackend:
 
 def _runtime_base_path() -> Path:
     if getattr(sys, "frozen", False):
-        return Path(sys._MEIPASS)  # type: ignore[arg-type]
+        return Path(sys._MEIPASS)  # type: ignore[attr-defined]
     return Path(__file__).resolve().parents[2]
 
 

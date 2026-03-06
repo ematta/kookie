@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -59,7 +59,7 @@ def start_health_server(
         def log_message(self, _format: str, *_args) -> None:
             return
 
-        def _write_json(self, payload: dict[str, object]) -> None:
+        def _write_json(self, payload: Mapping[str, object]) -> None:
             body = json.dumps(payload, sort_keys=True).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")

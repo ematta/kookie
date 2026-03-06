@@ -4,6 +4,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 CURATED_FONT_NAMES: tuple[str, ...] = (
     "Roboto",
@@ -90,7 +91,8 @@ def _sanitize_font_name(value: object) -> str:
 
 def _sanitize_font_size(value: object) -> int:
     try:
-        parsed = int(value)
+        v: Any = value
+        parsed = int(v)
     except (TypeError, ValueError):
         parsed = DEFAULT_FONT_SIZE
     return min(MAX_FONT_SIZE, max(MIN_FONT_SIZE, parsed))

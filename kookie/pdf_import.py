@@ -5,6 +5,7 @@ import io
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 
 class PdfImportError(RuntimeError):
@@ -51,7 +52,8 @@ def extract_pdf_content(
 
             for current_idx, page_idx in enumerate(page_indices, start=1):
                 page = page_objects[page_idx]
-                text = _normalize_page_text(page.get_text("text"))
+                page_any: Any = page
+                text = _normalize_page_text(page_any.get_text("text"))
                 
                 # Fallback to OCR if no text found and fallback enabled
                 if not text and use_ocr_fallback:
@@ -169,7 +171,8 @@ def _materialize_pages(document: object) -> list[object]:
         total = len(document)  # type: ignore[arg-type]
         return [document[idx] for idx in range(total)]  # type: ignore[index]
     except Exception:
-        return list(document)  # type: ignore[arg-type]
+        doc: Any = document
+        return list(doc)
 
 
 def _normalize_metadata(payload: object) -> dict[str, str]:
