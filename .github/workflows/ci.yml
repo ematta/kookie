@@ -40,6 +40,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: uv sync --extra dev
+      - name: Run Ruff
+        run: uv run ruff check
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+      - name: Run mypy
+        run: uv run mypy kookie
+        env:
+          PYTHONPATH: ${{ github.workspace }}
       - name: Run tests
         run: uv run pytest -q
         env:
