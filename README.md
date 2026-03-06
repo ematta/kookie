@@ -1,6 +1,6 @@
 # Kookie
 
-Local-first macOS desktop text-to-speech app using Kivy and Kokoro.
+Local-first macOS desktop text-to-speech app using PyQt and Kokoro.
 
 ## Setup
 

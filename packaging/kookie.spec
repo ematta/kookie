@@ -23,7 +23,7 @@ DYNAMIC_IMPORT_ALIASES = ["fitz"]
 
 # Core runtime packages that need explicit library/data collection
 RUNTIME_BINARY_PACKAGES = ["sounddevice", "onnxruntime"]
-RUNTIME_DATA_PACKAGES = ["kivy", "kokoro_onnx"]
+RUNTIME_DATA_PACKAGES = ["PyQt6", "kokoro_onnx"]
 
 
 def optional_data(source_rel: str, destination: str) -> list[tuple[str, str]]:
