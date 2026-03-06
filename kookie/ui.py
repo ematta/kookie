@@ -511,7 +511,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             url_bar = BoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
-                height=82,
+                height=90,
                 spacing=12,
                 padding=[14, 12, 14, 12],
             )
