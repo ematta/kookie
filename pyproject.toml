@@ -5,7 +5,7 @@ description = "Local-first macOS Kokoro TTS desktop app"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  "kivy>=2.3.0",
+  "PyQt6>=6.6.0",
   "numpy>=2.0.0",
   "sounddevice>=0.4.7",
   "onnxruntime>=1.18.0",

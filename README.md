@@ -1,17 +1,25 @@
 # Kookie
 
-Local-first macOS desktop text-to-speech app using Kivy and Kokoro.
+Local-first macOS desktop text-to-speech app using PyQt and Kokoro.
+
+## Setup
+
+Requires [uv](https://docs.astral.sh/uv/getting-started/installation/).
+
+```bash
+uv sync
+```
 
 ## Run (development)
 
 ```bash
-python main.py
+uv run kookie
 ```
 
 ## Preload voice
 
 ```bash
-scripts/preload_voice.sh
+uv run kookie-preload-voice
 ```
 
 This pre-load step checks for `voices.bin` in `KOOKIE_ASSET_DIR` (or the default assets path) and downloads it if missing.
@@ -27,7 +35,7 @@ the default voice URL is likely stale. Override the model and voice URLs before 
 ```bash
 export KOOKIE_MODEL_URL="https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.onnx"
 export KOOKIE_VOICES_URL="https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.bin"
-scripts/preload_voice.sh
+uv run kookie-preload-voice
 ```
 
 ## Status bar
@@ -88,8 +96,24 @@ MP3 export shells out to `ffmpeg`; install it if you want to use `Save MP3`.
 
 ## Packaging
 
+Preload assets before building so they are bundled into the app:
+
+```bash
+uv run kookie-preload-voice
+```
+
+Build the app bundle:
+
 ```bash
 scripts/build_app.sh
+```
+
+This runs `uv run pyinstaller packaging/kookie.spec` and produces `dist/Kookie.app`.
+The app icon is set from `kookie.png` in the project root.
+
+Sign, notarize, and package as DMG for distribution:
+
+```bash
 scripts/sign_app.sh dist/Kookie.app "Developer ID Application: Your Name"
 xcrun notarytool store-credentials KOOKIE_NOTARY --apple-id "<APPLE_ID>" --team-id "<TEAM_ID>" --password "<APP_SPECIFIC_PASSWORD>"
 scripts/notarize_app.sh dist/Kookie.app KOOKIE_NOTARY
@@ -102,4 +126,8 @@ scripts/create_dmg.sh dist/Kookie.app
 uv run pytest -q
 ```
 
-If dependencies are unavailable in the current environment, install the dev extras first.
+If dependencies are unavailable in the current environment, install them first:
+
+```bash
+uv sync --group dev
+```
