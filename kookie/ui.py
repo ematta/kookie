@@ -79,6 +79,27 @@ def _text_input_config(initial_text: str, *, prefs: EditorPreferences) -> dict[s
     }
 
 
+def _url_input_config() -> dict[str, object]:
+    return {
+        "hint_text": "Enter a URL to load webpage text...",
+        "multiline": False,
+        "readonly": False,
+        "disabled": False,
+        "size_hint_x": 1,
+        "size_hint_y": 1,
+        "font_size": URL_INPUT_FONT_SIZE,
+        "write_tab": False,
+        "background_normal": "",
+        "background_active": "",
+        "background_disabled_normal": "",
+        "foreground_color": TEXT_FOREGROUND_COLOR,
+        "background_color": TEXT_BACKGROUND_COLOR,
+        "cursor_color": TEXT_CURSOR_COLOR,
+        "selection_color": TEXT_SELECTION_COLOR,
+        "padding": [12, 10, 12, 10],
+    }
+
+
 def _scroll_view_config(word_wrap: bool) -> dict[str, object]:
     return {
         "scroll_type": ["bars", "content"],
@@ -520,24 +541,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 padding=[14, 12, 14, 12],
             )
             self._paint_background(url_bar, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
-            self.url_input = TextInput(
-                hint_text="Enter a URL to load webpage text...",
-                multiline=False,
-                readonly=False,
-                disabled=False,
-                size_hint_x=1,
-                size_hint_y=1,
-                font_size=URL_INPUT_FONT_SIZE,
-                write_tab=False,
-                background_normal="",
-                background_active="",
-                background_disabled_normal="",
-                foreground_color=TEXT_FOREGROUND_COLOR,
-                background_color=TEXT_BACKGROUND_COLOR,
-                cursor_color=TEXT_CURSOR_COLOR,
-                selection_color=TEXT_SELECTION_COLOR,
-                padding=[12, 10, 12, 10],
-            )
+            self.url_input = TextInput(**_url_input_config())
             self.url_load_btn = Button(
                 text="Load URL",
                 size_hint=(None, 1),
@@ -675,7 +679,9 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             Clock.schedule_interval(self._sync_ui, 0.1)
             self._sync_now()
             Clock.schedule_once(lambda *_: self._sync_text_input_size(), 0)
-            Clock.schedule_once(lambda *_: setattr(self.text_input, "focus", True), 0)
+            self.url_input.focus_next = self.text_input
+            self.text_input.focus_previous = self.url_input
+            Clock.schedule_once(lambda *_: setattr(self.url_input, "focus", True), 0)
             Window.bind(on_key_down=self._on_key_down)
             return root
 
