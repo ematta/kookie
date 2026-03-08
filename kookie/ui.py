@@ -544,6 +544,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 width=180,
                 **_control_style(background_color=PRIMARY_BUTTON_COLOR),
             )
+            self.url_input.bind(on_text_validate=lambda *_: self._on_load_url())
             self.url_load_btn.bind(on_press=lambda *_: self._on_load_url())
             url_bar.add_widget(self.url_input)
             url_bar.add_widget(self.url_load_btn)
