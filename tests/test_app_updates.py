@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from conftest import _AudioPlayer
+
 from kookie.app import create_app
 from kookie.config import AppConfig
 from kookie.update_checker import UpdateInfo

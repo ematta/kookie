@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
-import pytest
+
 from kookie.pdf_import import get_page_image_bytes, perform_ocr_on_image_bytes
+
 
 def test_get_page_image_bytes_calls_pixmap_methods():
     # Mock a PyMuPDF page

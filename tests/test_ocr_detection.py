@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
-import pytest
+
 from kookie.pdf_import import is_page_scanned
+
 
 def test_is_page_scanned_returns_true_for_empty_text():
     # Mock a PyMuPDF page with no text

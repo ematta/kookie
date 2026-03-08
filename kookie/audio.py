@@ -4,12 +4,18 @@ import queue
 import threading
 import time
 from collections.abc import Callable
+from contextlib import AbstractContextManager
+from typing import Any
 
 import numpy as np
 
 
 class AudioPlayer:
-    def __init__(self, sample_rate: int = 24_000, stream_factory: Callable[..., object] | None = None):
+    def __init__(
+        self,
+        sample_rate: int = 24_000,
+        stream_factory: Callable[..., AbstractContextManager[Any]] | None = None,
+    ):
         self.sample_rate = sample_rate
         self._stream_factory = stream_factory or self._default_stream_factory
 
@@ -66,7 +72,7 @@ class AudioPlayer:
 
     @staticmethod
     def _default_stream_factory(**kwargs):
-        import sounddevice as sd  # type: ignore
+        import sounddevice as sd
 
         return sd.OutputStream(
             samplerate=kwargs["sample_rate"],

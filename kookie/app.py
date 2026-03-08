@@ -23,7 +23,7 @@ from .preload import preload_assets
 from .telemetry import LocalTelemetry
 from .text_processing import normalize_text
 from .update_checker import UpdateInfo, check_for_update
-from .web_import import WebImportError, WebImportResult, fetch_webpage_text
+from .web_import import fetch_webpage_text
 
 
 class StartupPrompt(TypedDict):
@@ -661,7 +661,7 @@ def run() -> None:
     while True:
         preload_result = preload_assets(config)
 
-        startup_prompt: StartupPrompt | None = None
+        startup_prompt: dict[str, object] | None = None
         runtime_config = config
         if not preload_result.ready:
             runtime_config = replace(config, backend_mode="mock")

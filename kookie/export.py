@@ -193,5 +193,5 @@ def _resolve_ffmpeg_executable(
 
 def _runtime_base_path() -> Path:
     if getattr(sys, "frozen", False):
-        return Path(sys._MEIPASS)  # type: ignore[arg-type]
+        return Path(sys._MEIPASS)  # type: ignore[attr-defined]
     return Path(__file__).resolve().parents[1]

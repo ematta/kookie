@@ -4,6 +4,7 @@ import os
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 DEFAULT_MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx"
 DEFAULT_VOICES_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
@@ -214,7 +215,8 @@ def _safe_int(value: object, default: int) -> int:
     if value is None:
         return default
     try:
-        return int(value)
+        v: Any = value
+        return int(v)
     except (TypeError, ValueError):
         return default
 
@@ -223,7 +225,8 @@ def _safe_float(value: object, default: float) -> float:
     if value is None:
         return default
     try:
-        return float(value)
+        v: Any = value
+        return float(v)
     except (TypeError, ValueError):
         return default
 

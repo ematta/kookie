@@ -4,6 +4,7 @@ from pathlib import Path
 from threading import Event
 
 from conftest import _AudioPlayer
+
 from kookie.app import create_app
 from kookie.config import AppConfig
 

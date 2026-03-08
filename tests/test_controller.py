@@ -2,8 +2,8 @@ import threading
 import time
 
 import numpy as np
-
 from conftest import _AudioPlayer
+
 from kookie.controller import PlaybackController, PlaybackState
 
 

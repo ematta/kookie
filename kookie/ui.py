@@ -149,7 +149,7 @@ def _label_text_size_for_width(width: float) -> tuple[float, None]:
 
 def _runtime_base_path() -> Path:
     if getattr(sys, "frozen", False):
-        return Path(sys._MEIPASS)  # type: ignore[arg-type]
+        return Path(sys._MEIPASS)  # type: ignore[attr-defined]
     return Path(__file__).resolve().parents[1]
 
 
@@ -470,6 +470,10 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 Window.size = (1280, Window.height)
             if Window.height < 820:
                 Window.size = (Window.width, 820)
+            screen_w, screen_h = Window.system_size
+            win_w, win_h = Window.size
+            Window.left = max(0, (screen_w - win_w) // 2)
+            Window.top = max(0, (screen_h - win_h) // 2)
             root = BoxLayout(orientation="vertical", spacing=14, padding=[20, 16, 20, 16])
 
             self.editor_prefs = load_editor_preferences(runtime.config.asset_dir)
@@ -511,7 +515,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             url_bar = BoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
-                height=82,
+                height=90,
                 spacing=12,
                 padding=[14, 12, 14, 12],
             )
@@ -540,6 +544,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
                 width=180,
                 **_control_style(background_color=PRIMARY_BUTTON_COLOR),
             )
+            self.url_input.bind(on_text_validate=lambda *_: self._on_load_url())
             self.url_load_btn.bind(on_press=lambda *_: self._on_load_url())
             url_bar.add_widget(self.url_input)
             url_bar.add_widget(self.url_load_btn)

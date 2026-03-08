@@ -7,6 +7,7 @@ import re
 import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 AUTO_START = "<!-- BEGIN AUTO -->"
 AUTO_END = "<!-- END AUTO -->"
@@ -40,10 +41,11 @@ def _normalize_timestamp(generated_at: datetime | None) -> str:
     return stamp.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _read_project(pyproject_path: Path) -> dict:
+def _read_project(pyproject_path: Path) -> dict[Any, Any]:
     contents = pyproject_path.read_text(encoding="utf-8")
     parsed = tomllib.loads(contents)
-    return parsed.get("project", {})
+    result: dict[Any, Any] = parsed.get("project", {})
+    return result
 
 
 def _discover_top_level_dirs(repo_root: Path) -> list[str]:

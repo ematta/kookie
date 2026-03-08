@@ -31,7 +31,7 @@ def check_for_update(
             "User-Agent": "kookie-update-checker",
         },
     )
-    with fetcher(request, timeout=timeout) as response:  # type: ignore[call-arg]
+    with fetcher(request, timeout=timeout) as response:
         payload = json.loads(response.read().decode("utf-8"))
 
     if not isinstance(payload, dict):

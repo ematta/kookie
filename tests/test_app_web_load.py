@@ -3,9 +3,8 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-import pytest
-
 from conftest import _AudioPlayer
+
 from kookie.app import create_app
 from kookie.config import AppConfig
 from kookie.web_import import WebImportError, WebImportResult

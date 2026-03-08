@@ -15,6 +15,8 @@ dependencies = [
   "pytest>=9.0.2",
   "pillow>=12.1.1",
   "pytesseract>=0.3.13",
+  "ruff>=0.15.2",
+  "mypy>=1.19.1",
 ]
 
 [project.optional-dependencies]
