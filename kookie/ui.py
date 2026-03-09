@@ -11,7 +11,6 @@ from .controller import PlaybackState
 from .editor_prefs import (
     CURATED_FONT_NAMES,
     EDITOR_FONT_SIZES,
-    EditorPreferences,
     load_editor_preferences,
     sanitize_editor_preferences,
     save_editor_preferences,
@@ -57,61 +56,6 @@ NATIVE_OPEN_FILE_TYPES = (("PDF files", "*.pdf"), ("All files", "*.*"))
 NATIVE_SAVE_FILE_TYPES = (("MP3 files", "*.mp3"), ("All files", "*.*"))
 
 
-def _text_input_config(initial_text: str, *, prefs: EditorPreferences) -> dict[str, object]:
-    return {
-        "text": initial_text,
-        "multiline": True,
-        "readonly": False,
-        "disabled": False,
-        "input_type": "text",
-        "font_name": prefs.font_name,
-        "font_size": f"{prefs.font_size}sp",
-        "do_wrap": prefs.word_wrap,
-        "write_tab": True,
-        "background_normal": "",
-        "background_active": "",
-        "background_disabled_normal": "",
-        "foreground_color": TEXT_FOREGROUND_COLOR,
-        "background_color": TEXT_BACKGROUND_COLOR,
-        "selection_color": TEXT_SELECTION_COLOR,
-        "cursor_color": TEXT_CURSOR_COLOR,
-        "padding": [16, 16, 16, 16],
-    }
-
-
-def _url_input_config() -> dict[str, object]:
-    return {
-        "hint_text": "Enter a URL to load webpage text...",
-        "multiline": False,
-        "readonly": False,
-        "disabled": False,
-        "size_hint_x": 1,
-        "size_hint_y": 1,
-        "font_size": URL_INPUT_FONT_SIZE,
-        "write_tab": False,
-        "background_normal": "",
-        "background_active": "",
-        "background_disabled_normal": "",
-        "foreground_color": TEXT_FOREGROUND_COLOR,
-        "background_color": TEXT_BACKGROUND_COLOR,
-        "cursor_color": TEXT_CURSOR_COLOR,
-        "selection_color": TEXT_SELECTION_COLOR,
-        "padding": [12, 10, 12, 10],
-    }
-
-
-def _scroll_view_config(word_wrap: bool) -> dict[str, object]:
-    return {
-        "scroll_type": ["bars", "content"],
-        "bar_width": 12,
-        "bar_pos_y": "right",
-        "scroll_wheel_distance": "12sp",
-        "smooth_scroll_end": 10,
-        "do_scroll_y": True,
-        "do_scroll_x": not word_wrap,
-    }
-
-
 def _save_spinner_text(*, is_saving: bool, tick: int) -> str:
     if not is_saving:
         return ""
@@ -150,18 +94,6 @@ def _status_display_items(items: list[str]) -> tuple[str, str, str]:
         _shorten_middle(backend, max_chars=STATUS_BACKEND_MAX_CHARS),
         _shorten_middle(activity, max_chars=STATUS_ACTIVITY_MAX_CHARS),
     )
-
-
-def _status_label_config() -> dict[str, object]:
-    return {
-        "halign": "left",
-        "valign": "middle",
-        "shorten": True,
-        "shorten_from": "center",
-        "max_lines": 1,
-        "color": STATUS_TEXT_COLOR,
-        "font_size": STATUS_FONT_SIZE,
-    }
 
 
 def _label_text_size_for_width(width: float) -> tuple[float, None]:
@@ -443,252 +375,296 @@ def _prompt_mp3_output_path(
     return selected_output
 
 
-def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str | None:
+def run_pyqt_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str | None:
     try:
-        from kivy.app import App
-        from kivy.clock import Clock
-        from kivy.core.window import Window
-        from kivy.graphics import Color, Rectangle
-        from kivy.uix.boxlayout import BoxLayout
-        from kivy.uix.button import Button
-        from kivy.uix.label import Label
-        from kivy.uix.scrollview import ScrollView
-        from kivy.uix.slider import Slider
-        from kivy.uix.spinner import Spinner
-        from kivy.uix.textinput import TextInput
-        from kivy.uix.togglebutton import ToggleButton
+        from PyQt6.QtCore import Qt, QTimer
+        from PyQt6.QtGui import QFont, QIcon
+        from PyQt6.QtWidgets import (
+            QApplication,
+            QComboBox,
+            QHBoxLayout,
+            QLabel,
+            QLineEdit,
+            QMainWindow,
+            QPushButton,
+            QSlider,
+            QTextEdit,
+            QVBoxLayout,
+            QWidget,
+        )
     except Exception as exc:  # pragma: no cover - depends on local GUI deps
-        raise RuntimeError("Kivy is required to run the graphical application") from exc
+        raise RuntimeError("PyQt6 is required to run the graphical application") from exc
 
     from .i18n import get_translator
 
-    class KookieApp(App):
-        def __init__(self, **kwargs: Any):
-            super().__init__(**kwargs)
+    def _c(rgba: tuple[float, float, float, float]) -> str:
+        return f"rgb({int(rgba[0] * 255)}, {int(rgba[1] * 255)}, {int(rgba[2] * 255)})"
+
+    def _btn(bg: tuple[float, float, float, float]) -> str:
+        return (
+            f"QPushButton {{ background-color: {_c(bg)}; color: {_c(CONTROL_TEXT_COLOR)};"
+            f" border: none; padding: 6px 14px; font-size: 14px; }}"
+            f"QPushButton:disabled {{ color: rgba(150, 160, 180, 120); }}"
+        )
+
+    def _combo() -> str:
+        return (
+            f"QComboBox {{ background-color: {_c(CONTROL_SURFACE_COLOR)};"
+            f" color: {_c(CONTROL_TEXT_COLOR)}; border: none; padding: 6px 10px; font-size: 14px; }}"
+            f"QComboBox::drop-down {{ border: none; }}"
+            f"QComboBox QAbstractItemView {{ background-color: {_c(CONTROL_SURFACE_COLOR)};"
+            f" color: {_c(CONTROL_TEXT_COLOR)};"
+            f" selection-background-color: {_c(PRIMARY_BUTTON_COLOR)}; }}"
+        )
+
+    class KookieWindow(QMainWindow):
+        def __init__(self) -> None:
+            super().__init__()
             self.startup_action: str | None = None
-            icon_path = _app_icon_path()
-            if icon_path is not None:
-                self.icon = icon_path
-
-        def build(self):
-            if startup_prompt is not None:
-                prompt_message = str(startup_prompt.get("message", "")).strip()
-                if prompt_message:
-                    runtime.status_message = prompt_message
-
-            self._ = get_translator(getattr(runtime.config, "language", "en"))
-            selected_theme = getattr(runtime.config, "theme", "system")
-            dark_mode = selected_theme == "dark" or (selected_theme == "system" and detect_system_dark_mode())
-            if getattr(runtime.config, "high_contrast", False):
-                Window.clearcolor = (0.0, 0.0, 0.0, 1.0)
-            elif dark_mode:
-                Window.clearcolor = APP_BACKGROUND_COLOR
-            else:
-                Window.clearcolor = (0.94, 0.95, 0.97, 1.0)
-            Window.minimum_width = 1280
-            Window.minimum_height = 820
-            if Window.width < 1280:
-                Window.size = (1280, Window.height)
-            if Window.height < 820:
-                Window.size = (Window.width, 820)
-            screen_w, screen_h = Window.system_size
-            win_w, win_h = Window.size
-            Window.left = max(0, (screen_w - win_w) // 2)
-            Window.top = max(0, (screen_h - win_h) // 2)
-            root = BoxLayout(orientation="vertical", spacing=14, padding=[20, 16, 20, 16])
-
-            self.editor_prefs = load_editor_preferences(runtime.config.asset_dir)
-
-            editor_controls = BoxLayout(
-                orientation="horizontal",
-                size_hint_y=None,
-                height=90,
-                spacing=12,
-                padding=[14, 12, 14, 12],
-            )
-            self._paint_background(editor_controls, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
-            self.font_picker = Spinner(
-                text=self.editor_prefs.font_name,
-                values=list(CURATED_FONT_NAMES),
-                size_hint=(None, 1),
-                width=280,
-                **_control_style(background_color=CONTROL_SURFACE_COLOR),
-            )
-            self.font_size_picker = Spinner(
-                text=str(self.editor_prefs.font_size),
-                values=[str(size) for size in EDITOR_FONT_SIZES],
-                size_hint=(None, 1),
-                width=140,
-                **_control_style(background_color=CONTROL_SURFACE_COLOR),
-            )
-            self.word_wrap_toggle = ToggleButton(
-                text=self._wrap_label(self.editor_prefs.word_wrap),
-                state="down" if self.editor_prefs.word_wrap else "normal",
-                size_hint=(None, 1),
-                width=220,
-                **_control_style(background_color=PRIMARY_BUTTON_COLOR),
-            )
-            editor_controls.add_widget(self.font_picker)
-            editor_controls.add_widget(self.font_size_picker)
-            editor_controls.add_widget(self.word_wrap_toggle)
-            root.add_widget(editor_controls)
-
-            url_bar = BoxLayout(
-                orientation="horizontal",
-                size_hint_y=None,
-                height=90,
-                spacing=12,
-                padding=[14, 12, 14, 12],
-            )
-            self._paint_background(url_bar, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
-            self.url_input = TextInput(**_url_input_config())
-            self.url_load_btn = Button(
-                text="Load URL",
-                size_hint=(None, 1),
-                width=180,
-                **_control_style(background_color=PRIMARY_BUTTON_COLOR),
-            )
-            self.url_input.bind(on_text_validate=lambda *_: self._on_load_url())
-            self.url_load_btn.bind(on_press=lambda *_: self._on_load_url())
-            url_bar.add_widget(self.url_input)
-            url_bar.add_widget(self.url_load_btn)
-            root.add_widget(url_bar)
-
-            self.editor_scroll = ScrollView(**_scroll_view_config(word_wrap=self.editor_prefs.word_wrap))
-            self.text_input = TextInput(
-                **_text_input_config(
-                    initial_text=runtime.text,
-                    prefs=self.editor_prefs,
-                )
-            )
-            self.text_input.size_hint_y = None
-            self.text_input.bind(text=lambda _, value: runtime.set_text(value))
-            self.text_input.bind(minimum_height=lambda *_: self._sync_text_input_size())
-            self.editor_scroll.bind(height=lambda *_: self._sync_text_input_size())
-            self.editor_scroll.bind(width=lambda *_: self._sync_text_input_size())
-            try:
-                self.text_input.bind(minimum_width=lambda *_: self._sync_text_input_size())
-            except Exception:
-                pass
-            self.editor_scroll.add_widget(self.text_input)
-            root.add_widget(self.editor_scroll)
-
-            self.font_picker.bind(text=lambda _, value: self._on_font_change(value))
-            self.font_size_picker.bind(text=lambda _, value: self._on_font_size_change(value))
-            self.word_wrap_toggle.bind(state=lambda _, value: self._on_word_wrap_change(value))
-
-            controls = BoxLayout(
-                orientation="horizontal",
-                size_hint_y=None,
-                height=94,
-                spacing=14,
-                padding=[14, 12, 14, 12],
-            )
-            self._paint_background(controls, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
-            self.load_btn = Button(text=self._("Load PDF"), **_control_style(background_color=CONTROL_SURFACE_COLOR))
-            self.play_btn = Button(text=self._("Play"), **_control_style(background_color=PRIMARY_BUTTON_COLOR))
-            self.pause_btn = Button(text="Pause", **_control_style(background_color=CONTROL_SURFACE_COLOR))
-            stop_btn = Button(text=self._("Stop"), **_control_style(background_color=DANGER_BUTTON_COLOR))
-            self.save_btn = Button(text=self._("Save MP3"), **_control_style(background_color=SUCCESS_BUTTON_COLOR))
-            self.voice_picker = Spinner(
-                text=runtime.selected_voice,
-                values=runtime.available_voices(),
-                size_hint=(None, 1),
-                width=220,
-                **_control_style(background_color=CONTROL_SURFACE_COLOR),
-            )
-            self.speed_picker = Spinner(
-                text="1.0x",
-                values=["0.5x", "1.0x", "1.5x", "2.0x"],
-                size_hint=(None, 1),
-                width=140,
-                **_control_style(background_color=CONTROL_SURFACE_COLOR),
-            )
-            self.volume_slider = Slider(min=0.0, max=1.0, value=1.0, size_hint=(None, 1), width=160)
-            self.save_spinner = Label(text="", size_hint=(None, 1), width=220, **_status_label_config())
-            self._bind_label_text_size(self.save_spinner)
-            self.load_btn.bind(on_press=lambda *_: self._on_load_pdf())
-            self.play_btn.bind(on_press=lambda *_: self._on_play())
-            self.pause_btn.bind(on_press=lambda *_: self._on_pause())
-            stop_btn.bind(on_press=lambda *_: self._on_stop())
-            self.save_btn.bind(on_press=lambda *_: self._on_save())
-            self.voice_picker.bind(text=lambda _, value: self._on_voice_change(value))
-            self.speed_picker.bind(text=lambda _, value: self._on_speed_change(value))
-            self.volume_slider.bind(value=lambda _, value: self._on_volume_change(value))
-            controls.add_widget(self.load_btn)
-            controls.add_widget(self.play_btn)
-            controls.add_widget(self.pause_btn)
-            controls.add_widget(stop_btn)
-            controls.add_widget(self.save_btn)
-            controls.add_widget(self.voice_picker)
-            controls.add_widget(self.speed_picker)
-            controls.add_widget(self.volume_slider)
-            controls.add_widget(self.save_spinner)
-            root.add_widget(controls)
             self._save_spinner_tick = 0
             self._load_spinner_tick = 0
             self._recent_files: list[str] = []
-
-            status_bar = BoxLayout(
-                orientation="vertical",
-                size_hint_y=None,
-                height=STATUS_BAR_HEIGHT,
-                spacing=STATUS_BAR_ROW_SPACING,
-                padding=list(STATUS_BAR_PADDING),
+            self._ = get_translator(getattr(runtime.config, "language", "en"))
+            icon_path = _app_icon_path()
+            if icon_path is not None:
+                self.setWindowIcon(QIcon(icon_path))
+            self.setWindowTitle("Kookie")
+            selected_theme = getattr(runtime.config, "theme", "system")
+            self._dark_mode = selected_theme == "dark" or (
+                selected_theme == "system" and detect_system_dark_mode()
             )
-            self._paint_background(status_bar, TOOLBAR_BACKGROUND_COLOR, Color=Color, Rectangle=Rectangle)
-            status_header = BoxLayout(
-                orientation="horizontal",
-                size_hint_y=None,
-                height=STATUS_HEADER_HEIGHT,
-                spacing=16,
-            )
-            self.voice_status = Label(text="", size_hint_x=0.42, **_status_label_config())
-            self.backend_status = Label(text="", size_hint_x=0.58, **_status_label_config())
-            self.activity_status = Label(
-                text="",
-                size_hint_y=None,
-                height=STATUS_ACTIVITY_ROW_MIN_HEIGHT,
-                **_status_label_config(),
-            )
-            self.progress_status = Label(
-                text="",
-                size_hint_y=None,
-                height=STATUS_PROGRESS_ROW_MIN_HEIGHT,
-                **_status_label_config(),
-            )
-            self.recent_status = Label(
-                text="",
-                size_hint_y=None,
-                height=STATUS_RECENT_ROW_MIN_HEIGHT,
-                **_status_label_config(),
-            )
-            self._bind_label_text_size(self.voice_status)
-            self._bind_label_text_size(self.backend_status)
-            self._bind_label_text_size(self.activity_status)
-            self._bind_label_text_size(self.progress_status)
-            self._bind_label_text_size(self.recent_status)
-            status_header.add_widget(self.voice_status)
-            status_header.add_widget(self.backend_status)
-            status_bar.add_widget(status_header)
-            status_bar.add_widget(self.activity_status)
-            status_bar.add_widget(self.progress_status)
-            status_bar.add_widget(self.recent_status)
-            root.add_widget(status_bar)
-
-            Clock.schedule_interval(self._sync_ui, 0.1)
+            self.editor_prefs = load_editor_preferences(runtime.config.asset_dir)
+            self._build_ui()
+            if startup_prompt is not None:
+                msg = str(startup_prompt.get("message", "")).strip()
+                if msg:
+                    runtime.status_message = msg
+            self._timer = QTimer(self)
+            self._timer.setInterval(100)
+            self._timer.timeout.connect(self._sync_now)
+            self._timer.start()
+            self.setMinimumSize(1280, 820)
+            screen = QApplication.primaryScreen()
+            if screen is not None:
+                ag = screen.availableGeometry()
+                w = max(1280, min(ag.width(), 1600))
+                h = max(820, min(ag.height(), 960))
+                self.resize(w, h)
+                self.move(ag.x() + (ag.width() - w) // 2, ag.y() + (ag.height() - h) // 2)
             self._sync_now()
-            Clock.schedule_once(lambda *_: self._sync_text_input_size(), 0)
-            self.url_input.focus_next = self.text_input
-            self.text_input.focus_previous = self.url_input
-            Clock.schedule_once(lambda *_: setattr(self.url_input, "focus", True), 0)
-            Window.bind(on_key_down=self._on_key_down)
-            return root
+            self.url_input.setFocus()
 
-        def on_stop(self):
+        def _build_ui(self) -> None:
+            central = QWidget()
+            self.setCentralWidget(central)
+            bg = _c(APP_BACKGROUND_COLOR) if self._dark_mode else "rgb(240, 242, 248)"
+            central.setStyleSheet(f"QWidget {{ background-color: {bg}; }}")
+            root = QVBoxLayout(central)
+            root.setContentsMargins(20, 16, 20, 16)
+            root.setSpacing(14)
+
+            # ── Editor controls toolbar ──────────────────────────────────────
+            editor_bar = QWidget()
+            editor_bar.setFixedHeight(90)
+            editor_bar.setStyleSheet(f"background-color: {_c(TOOLBAR_BACKGROUND_COLOR)};")
+            editor_row = QHBoxLayout(editor_bar)
+            editor_row.setContentsMargins(14, 12, 14, 12)
+            editor_row.setSpacing(12)
+            self.font_picker = QComboBox()
+            self.font_picker.addItems(list(CURATED_FONT_NAMES))
+            self.font_picker.setCurrentText(self.editor_prefs.font_name)
+            self.font_picker.setFixedWidth(280)
+            self.font_picker.setStyleSheet(_combo())
+            self.font_size_picker = QComboBox()
+            self.font_size_picker.addItems([str(s) for s in EDITOR_FONT_SIZES])
+            self.font_size_picker.setCurrentText(str(self.editor_prefs.font_size))
+            self.font_size_picker.setFixedWidth(140)
+            self.font_size_picker.setStyleSheet(_combo())
+            self.word_wrap_toggle = QPushButton(self._wrap_label(self.editor_prefs.word_wrap))
+            self.word_wrap_toggle.setCheckable(True)
+            self.word_wrap_toggle.setChecked(self.editor_prefs.word_wrap)
+            self.word_wrap_toggle.setFixedWidth(220)
+            self._refresh_wrap_style()
+            editor_row.addWidget(self.font_picker)
+            editor_row.addWidget(self.font_size_picker)
+            editor_row.addWidget(self.word_wrap_toggle)
+            editor_row.addStretch()
+            root.addWidget(editor_bar)
+
+            # ── URL bar ──────────────────────────────────────────────────────
+            url_bar = QWidget()
+            url_bar.setFixedHeight(90)
+            url_bar.setStyleSheet(f"background-color: {_c(TOOLBAR_BACKGROUND_COLOR)};")
+            url_row = QHBoxLayout(url_bar)
+            url_row.setContentsMargins(14, 12, 14, 12)
+            url_row.setSpacing(12)
+            self.url_input = QLineEdit()
+            self.url_input.setPlaceholderText("Enter a URL to load webpage text...")
+            self.url_input.setStyleSheet(
+                f"QLineEdit {{ background-color: {_c(TEXT_BACKGROUND_COLOR)};"
+                f" color: {_c(TEXT_FOREGROUND_COLOR)}; border: none;"
+                f" padding: 10px 12px; font-size: 16px; }}"
+            )
+            self.url_load_btn = QPushButton("Load URL")
+            self.url_load_btn.setFixedWidth(180)
+            self.url_load_btn.setStyleSheet(_btn(PRIMARY_BUTTON_COLOR))
+            self.url_input.returnPressed.connect(self._on_load_url)
+            self.url_load_btn.clicked.connect(self._on_load_url)
+            url_row.addWidget(self.url_input)
+            url_row.addWidget(self.url_load_btn)
+            root.addWidget(url_bar)
+
+            # ── Text editor ──────────────────────────────────────────────────
+            sel = TEXT_SELECTION_COLOR
+            sel_css = (
+                f"rgba({int(sel[0]*255)}, {int(sel[1]*255)},"
+                f" {int(sel[2]*255)}, {int(sel[3]*255)})"
+            )
+            self.text_input = QTextEdit()
+            self.text_input.setFont(QFont(self.editor_prefs.font_name, self.editor_prefs.font_size))
+            self.text_input.setPlainText(runtime.text)
+            self.text_input.setTabChangesFocus(False)
+            self.text_input.setStyleSheet(
+                f"QTextEdit {{ background-color: {_c(TEXT_BACKGROUND_COLOR)};"
+                f" color: {_c(TEXT_FOREGROUND_COLOR)}; border: none; padding: 16px;"
+                f" selection-background-color: {sel_css}; }}"
+            )
+            self._apply_word_wrap()
+            self.text_input.textChanged.connect(
+                lambda: runtime.set_text(self.text_input.toPlainText())
+            )
+            root.addWidget(self.text_input, stretch=1)
+
+            # ── Controls toolbar ─────────────────────────────────────────────
+            ctrl_bar = QWidget()
+            ctrl_bar.setFixedHeight(94)
+            ctrl_bar.setStyleSheet(f"background-color: {_c(TOOLBAR_BACKGROUND_COLOR)};")
+            ctrl_row = QHBoxLayout(ctrl_bar)
+            ctrl_row.setContentsMargins(14, 12, 14, 12)
+            ctrl_row.setSpacing(14)
+            self.load_btn = QPushButton(self._("Load PDF"))
+            self.load_btn.setStyleSheet(_btn(CONTROL_SURFACE_COLOR))
+            self.play_btn = QPushButton(self._("Play"))
+            self.play_btn.setStyleSheet(_btn(PRIMARY_BUTTON_COLOR))
+            self.pause_btn = QPushButton("Pause")
+            self.pause_btn.setStyleSheet(_btn(CONTROL_SURFACE_COLOR))
+            stop_btn = QPushButton(self._("Stop"))
+            stop_btn.setStyleSheet(_btn(DANGER_BUTTON_COLOR))
+            self.save_btn = QPushButton(self._("Save MP3"))
+            self.save_btn.setStyleSheet(_btn(SUCCESS_BUTTON_COLOR))
+            self.voice_picker = QComboBox()
+            self.voice_picker.addItems(runtime.available_voices())
+            self.voice_picker.setCurrentText(runtime.selected_voice)
+            self.voice_picker.setFixedWidth(220)
+            self.voice_picker.setStyleSheet(_combo())
+            self.speed_picker = QComboBox()
+            self.speed_picker.addItems(["0.5x", "1.0x", "1.5x", "2.0x"])
+            self.speed_picker.setCurrentText("1.0x")
+            self.speed_picker.setFixedWidth(140)
+            self.speed_picker.setStyleSheet(_combo())
+            self.volume_slider = QSlider(Qt.Orientation.Horizontal)
+            self.volume_slider.setRange(0, 100)
+            self.volume_slider.setValue(100)
+            self.volume_slider.setFixedWidth(160)
+            self.save_spinner_label = QLabel("")
+            self.save_spinner_label.setFixedWidth(220)
+            self.save_spinner_label.setStyleSheet(
+                f"color: {_c(STATUS_TEXT_COLOR)}; font-size: 15px; background: transparent;"
+            )
+            self.load_btn.clicked.connect(self._on_load_pdf)
+            self.play_btn.clicked.connect(self._on_play)
+            self.pause_btn.clicked.connect(self._on_pause)
+            stop_btn.clicked.connect(self._on_stop)
+            self.save_btn.clicked.connect(self._on_save)
+            self.voice_picker.currentTextChanged.connect(self._on_voice_change)
+            self.speed_picker.currentTextChanged.connect(self._on_speed_change)
+            self.volume_slider.valueChanged.connect(lambda v: self._on_volume_change(v / 100.0))
+            ctrl_row.addWidget(self.load_btn)
+            ctrl_row.addWidget(self.play_btn)
+            ctrl_row.addWidget(self.pause_btn)
+            ctrl_row.addWidget(stop_btn)
+            ctrl_row.addWidget(self.save_btn)
+            ctrl_row.addWidget(self.voice_picker)
+            ctrl_row.addWidget(self.speed_picker)
+            ctrl_row.addWidget(self.volume_slider)
+            ctrl_row.addWidget(self.save_spinner_label)
+            root.addWidget(ctrl_bar)
+
+            # ── Status bar ───────────────────────────────────────────────────
+            status_bar = QWidget()
+            status_bar.setStyleSheet(f"background-color: {_c(TOOLBAR_BACKGROUND_COLOR)};")
+            status_layout = QVBoxLayout(status_bar)
+            status_layout.setContentsMargins(16, 12, 16, 12)
+            status_layout.setSpacing(8)
+            lbl_css = (
+                f"color: {_c(STATUS_TEXT_COLOR)}; font-size: 15px; background: transparent;"
+            )
+            status_hdr = QWidget()
+            status_hdr.setStyleSheet("background: transparent;")
+            hdr_row = QHBoxLayout(status_hdr)
+            hdr_row.setContentsMargins(0, 0, 0, 0)
+            hdr_row.setSpacing(16)
+            self.voice_status = QLabel("")
+            self.voice_status.setStyleSheet(lbl_css)
+            self.backend_status = QLabel("")
+            self.backend_status.setStyleSheet(lbl_css)
+            hdr_row.addWidget(self.voice_status, stretch=42)
+            hdr_row.addWidget(self.backend_status, stretch=58)
+            self.activity_status = QLabel("")
+            self.activity_status.setStyleSheet(lbl_css)
+            self.progress_status = QLabel("")
+            self.progress_status.setStyleSheet(lbl_css)
+            self.recent_status = QLabel("")
+            self.recent_status.setStyleSheet(lbl_css)
+            status_layout.addWidget(status_hdr)
+            status_layout.addWidget(self.activity_status)
+            status_layout.addWidget(self.progress_status)
+            status_layout.addWidget(self.recent_status)
+            root.addWidget(status_bar)
+
+            # ── Tab order and editor signal connections ───────────────────────
+            self.setTabOrder(self.url_input, self.text_input)
+            self.font_picker.currentTextChanged.connect(self._on_font_change)
+            self.font_size_picker.currentTextChanged.connect(self._on_font_size_change)
+            self.word_wrap_toggle.toggled.connect(self._on_word_wrap_change)
+
+        def closeEvent(self, event: Any) -> None:
+            self._timer.stop()
             runtime.stop()
             if startup_prompt is not None and self.startup_action is None:
                 self.startup_action = "continue_mock"
+            super().closeEvent(event)
+
+        def keyPressEvent(self, event: Any) -> None:
+            mods = event.modifiers()
+            is_primary = bool(
+                mods & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.MetaModifier)
+            )
+            is_shift = bool(mods & Qt.KeyboardModifier.ShiftModifier)
+            key = event.key()
+            if is_primary:
+                if key == Qt.Key.Key_P:
+                    self._on_play()
+                    return
+                if key == Qt.Key.Key_S:
+                    self._on_save()
+                    return
+                if key == Qt.Key.Key_O:
+                    self._on_load_pdf()
+                    return
+                if key == Qt.Key.Key_Z:
+                    self.text_input.redo() if is_shift else self.text_input.undo()
+                    return
+                if startup_prompt is not None:
+                    if key == Qt.Key.Key_R:
+                        self.startup_action = "retry"
+                        self.close()
+                        return
+                    if key == Qt.Key.Key_Q:
+                        self.startup_action = "quit"
+                        self.close()
+                        return
+            super().keyPressEvent(event)
 
         def _on_load_pdf(self) -> None:
             try:
@@ -707,7 +683,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             self._sync_now()
 
         def _on_load_url(self) -> None:
-            url = self.url_input.text.strip()
+            url = self.url_input.text().strip()
             if not url:
                 runtime.status_message = "Enter a URL in the address bar."
                 self._sync_now()
@@ -717,7 +693,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             self._sync_now()
 
         def _on_play(self) -> None:
-            runtime.set_text(self.text_input.text)
+            runtime.set_text(self.text_input.toPlainText())
             runtime.play()
             self._sync_now()
 
@@ -733,7 +709,7 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
             self._sync_now()
 
         def _on_save(self) -> None:
-            runtime.set_text(self.text_input.text)
+            runtime.set_text(self.text_input.toPlainText())
             if not runtime.text:
                 runtime.status_message = "Enter text in the text area."
                 self._sync_now()
@@ -769,110 +745,14 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
         def _on_volume_change(self, selected_volume: float) -> None:
             runtime.set_volume(selected_volume)
 
-        def _on_key_down(self, _window, _key, _scancode, codepoint, modifiers) -> bool:
-            modifier_set = {value.lower() for value in (modifiers or [])}
-            is_primary_shortcut = "meta" in modifier_set or "ctrl" in modifier_set
-            if not is_primary_shortcut:
-                return False
-
-            key_text = (codepoint or "").lower()
-            if key_text == "p":
-                self._on_play()
-                return True
-            if key_text == "s":
-                self._on_save()
-                return True
-            if key_text == "o":
-                self._on_load_pdf()
-                return True
-            if key_text == "z":
-                if "shift" in modifier_set:
-                    self._try_redo()
-                else:
-                    self._try_undo()
-                return True
-            if startup_prompt is not None and key_text == "r":
-                self.startup_action = "retry"
-                self.stop()
-                return True
-            if startup_prompt is not None and key_text == "q":
-                self.startup_action = "quit"
-                self.stop()
-                return True
-            return False
-
-        def _try_undo(self) -> None:
-            undo = getattr(self.text_input, "do_undo", None)
-            if callable(undo):
-                undo()
-
-        def _try_redo(self) -> None:
-            redo = getattr(self.text_input, "do_redo", None)
-            if callable(redo):
-                redo()
-
-        def _sync_ui(self, *_: Any) -> None:
-            self._sync_now()
-
-        def _sync_now(self) -> None:
-            runtime.poll_mp3_save()
-
-            loaded_text, pdf_path = runtime.poll_pdf_load()
-            if loaded_text is not None and pdf_path is not None:
-                self._recent_files = _update_recent_files(self._recent_files, str(pdf_path))
-                self.text_input.text = loaded_text
-                self._sync_text_input_size()
-
-            webpage_text, webpage_url = runtime.poll_webpage_load()
-            if webpage_text is not None and webpage_url is not None:
-                self.text_input.text = webpage_text
-                self._sync_text_input_size()
-
-            is_saving = runtime.is_saving_mp3
-            is_loading = runtime.is_loading_pdf or runtime.is_loading_webpage
-
-            self.save_btn.disabled = is_saving or is_loading
-            self.play_btn.disabled = is_saving or is_loading
-            self.load_btn.disabled = is_saving or is_loading
-            self.url_load_btn.disabled = is_saving or is_loading
-
-            self.pause_btn.text = "Resume" if runtime.controller.state is PlaybackState.PAUSED else "Pause"
-
-            if is_saving:
-                self.save_spinner.text = _save_spinner_text(is_saving=is_saving, tick=self._save_spinner_tick)
-                self._save_spinner_tick += 1
-            elif is_loading:
-                self.save_spinner.text = _load_spinner_text(is_loading=is_loading, tick=self._load_spinner_tick)
-                self._load_spinner_tick += 1
-            else:
-                self.save_spinner.text = ""
-                self._save_spinner_tick = 0
-                self._load_spinner_tick = 0
-
-            voice_text, backend_text, activity_text = _status_display_items(runtime.status_bar_items)
-            self.voice_status.text = voice_text
-            self.backend_status.text = backend_text
-            self.activity_status.text = activity_text
-            progress = runtime.playback_progress
-            self.progress_status.text = (
-                f"Progress: {progress['played_samples']} / {progress['synthesized_samples']} samples"
-            )
-            if runtime.status_message.startswith("Saved MP3:"):
-                self._recent_files = _update_recent_files(
-                    self._recent_files,
-                    runtime.status_message.replace("Saved MP3:", "").strip(),
-                )
-            recent_tail = ", ".join(Path(item).name for item in self._recent_files[:3])
-            self.recent_status.text = f"Recent: {recent_tail}" if recent_tail else "Recent: (none)"
-
         def _on_font_change(self, selected_font: str) -> None:
             self._set_editor_preferences(font_name=selected_font)
 
         def _on_font_size_change(self, selected_size: str) -> None:
             self._set_editor_preferences(font_size=selected_size)
 
-        def _on_word_wrap_change(self, state: str) -> None:
-            self._set_editor_preferences(word_wrap=state == "down")
+        def _on_word_wrap_change(self, checked: bool) -> None:
+            self._set_editor_preferences(word_wrap=checked)
 
         def _set_editor_preferences(
             self,
@@ -895,81 +775,108 @@ def run_kivy_ui(runtime, startup_prompt: dict[str, object] | None = None) -> str
 
         def _apply_editor_preferences(self) -> None:
             try:
-                self.text_input.font_name = self.editor_prefs.font_name
+                self.text_input.setFont(
+                    QFont(self.editor_prefs.font_name, self.editor_prefs.font_size)
+                )
             except Exception:
                 self.editor_prefs = sanitize_editor_preferences(
                     font_name="Roboto",
                     font_size=self.editor_prefs.font_size,
                     word_wrap=self.editor_prefs.word_wrap,
                 )
-                self.text_input.font_name = self.editor_prefs.font_name
-            self.text_input.font_size = f"{self.editor_prefs.font_size}sp"
-            self.text_input.do_wrap = self.editor_prefs.word_wrap
-
-            for key, value in _scroll_view_config(self.editor_prefs.word_wrap).items():
-                setattr(self.editor_scroll, key, value)
-
-            if self.font_picker.text != self.editor_prefs.font_name:
-                self.font_picker.text = self.editor_prefs.font_name
-
+                self.text_input.setFont(
+                    QFont(self.editor_prefs.font_name, self.editor_prefs.font_size)
+                )
+            self._apply_word_wrap()
+            if self.font_picker.currentText() != self.editor_prefs.font_name:
+                self.font_picker.setCurrentText(self.editor_prefs.font_name)
             size_text = str(self.editor_prefs.font_size)
-            if self.font_size_picker.text != size_text:
-                self.font_size_picker.text = size_text
+            if self.font_size_picker.currentText() != size_text:
+                self.font_size_picker.setCurrentText(size_text)
+            if self.word_wrap_toggle.isChecked() != self.editor_prefs.word_wrap:
+                self.word_wrap_toggle.setChecked(self.editor_prefs.word_wrap)
+            self.word_wrap_toggle.setText(self._wrap_label(self.editor_prefs.word_wrap))
+            self._refresh_wrap_style()
 
-            target_state = "down" if self.editor_prefs.word_wrap else "normal"
-            if self.word_wrap_toggle.state != target_state:
-                self.word_wrap_toggle.state = target_state
-            self.word_wrap_toggle.text = self._wrap_label(self.editor_prefs.word_wrap)
-            if self.word_wrap_toggle.state == "down":
-                self.word_wrap_toggle.background_color = PRIMARY_BUTTON_COLOR
-            else:
-                self.word_wrap_toggle.background_color = CONTROL_SURFACE_COLOR
-            self._sync_text_input_size()
-
-        def _sync_text_input_size(self, *_: Any) -> None:
-            scroll_height = getattr(self.editor_scroll, "height", 0)
-            scroll_width = getattr(self.editor_scroll, "width", 0)
-            minimum_height = getattr(self.text_input, "minimum_height", 0)
-            self.text_input.height = max(scroll_height, minimum_height)
-
+        def _apply_word_wrap(self) -> None:
             if self.editor_prefs.word_wrap:
-                self.text_input.size_hint_x = 1
-                return
+                self.text_input.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+            else:
+                self.text_input.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
 
-            self.text_input.size_hint_x = None
-            minimum_width = getattr(self.text_input, "minimum_width", 0)
-            self.text_input.width = max(scroll_width, minimum_width)
+        def _refresh_wrap_style(self) -> None:
+            color = PRIMARY_BUTTON_COLOR if self.editor_prefs.word_wrap else CONTROL_SURFACE_COLOR
+            self.word_wrap_toggle.setStyleSheet(_btn(color))
+
+        def _sync_now(self) -> None:
+            runtime.poll_mp3_save()
+
+            loaded_text, pdf_path = runtime.poll_pdf_load()
+            if loaded_text is not None and pdf_path is not None:
+                self._recent_files = _update_recent_files(self._recent_files, str(pdf_path))
+                self.text_input.blockSignals(True)
+                self.text_input.setPlainText(loaded_text)
+                self.text_input.blockSignals(False)
+
+            webpage_text, webpage_url = runtime.poll_webpage_load()
+            if webpage_text is not None and webpage_url is not None:
+                self.text_input.blockSignals(True)
+                self.text_input.setPlainText(webpage_text)
+                self.text_input.blockSignals(False)
+
+            is_saving = runtime.is_saving_mp3
+            is_loading = runtime.is_loading_pdf or runtime.is_loading_webpage
+
+            self.save_btn.setDisabled(is_saving or is_loading)
+            self.play_btn.setDisabled(is_saving or is_loading)
+            self.load_btn.setDisabled(is_saving or is_loading)
+            self.url_load_btn.setDisabled(is_saving or is_loading)
+
+            self.pause_btn.setText(
+                "Resume" if runtime.controller.state is PlaybackState.PAUSED else "Pause"
+            )
+
+            if is_saving:
+                self.save_spinner_label.setText(
+                    _save_spinner_text(is_saving=is_saving, tick=self._save_spinner_tick)
+                )
+                self._save_spinner_tick += 1
+            elif is_loading:
+                self.save_spinner_label.setText(
+                    _load_spinner_text(is_loading=is_loading, tick=self._load_spinner_tick)
+                )
+                self._load_spinner_tick += 1
+            else:
+                self.save_spinner_label.setText("")
+                self._save_spinner_tick = 0
+                self._load_spinner_tick = 0
+
+            voice_text, backend_text, activity_text = _status_display_items(runtime.status_bar_items)
+            self.voice_status.setText(voice_text)
+            self.backend_status.setText(backend_text)
+            self.activity_status.setText(activity_text)
+            progress = runtime.playback_progress
+            self.progress_status.setText(
+                f"Progress: {progress['played_samples']} / {progress['synthesized_samples']} samples"
+            )
+            if runtime.status_message.startswith("Saved MP3:"):
+                self._recent_files = _update_recent_files(
+                    self._recent_files,
+                    runtime.status_message.replace("Saved MP3:", "").strip(),
+                )
+            recent_tail = ", ".join(Path(item).name for item in self._recent_files[:3])
+            self.recent_status.setText(
+                f"Recent: {recent_tail}" if recent_tail else "Recent: (none)"
+            )
 
         @staticmethod
         def _wrap_label(word_wrap: bool) -> str:
             return "Wrap: On" if word_wrap else "Wrap: Off"
 
-        @staticmethod
-        def _paint_background(
-            widget: Any,
-            color: tuple[float, float, float, float],
-            *,
-            Color: Any,
-            Rectangle: Any,
-        ) -> None:
-            with widget.canvas.before:
-                Color(*color)
-                background_rect = Rectangle(pos=widget.pos, size=widget.size)
-
-            def _sync_background(instance, *_):
-                background_rect.pos = instance.pos
-                background_rect.size = instance.size
-
-            widget.bind(pos=_sync_background, size=_sync_background)
-
-        @staticmethod
-        def _bind_label_text_size(label: Any) -> None:
-            def _sync_text_size(instance, *_):
-                instance.text_size = _label_text_size_for_width(instance.width)
-
-            label.bind(size=_sync_text_size)
-            _sync_text_size(label)
-
-    app = KookieApp()
-    app.run()
-    return app.startup_action
+    q_app = QApplication.instance()
+    if q_app is None:
+        q_app = QApplication(sys.argv)
+    window = KookieWindow()
+    window.show()
+    q_app.exec()
+    return window.startup_action

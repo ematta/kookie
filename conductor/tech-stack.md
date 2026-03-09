@@ -4,7 +4,7 @@
 - **Python 3.12:** The core logic, text processing, and UI are built with Python 3.12, using  for modern dependency management and environment control.
 
 ## User Interface (UI)
-- **Kivy:** A cross-platform framework used to create the macOS desktop interface, providing high performance and customizability for the editor and controls.
+- **PyQt6:** A cross-platform framework used to create the macOS desktop interface, providing high performance and customizability for the editor and controls.
 
 ## Speech Synthesis (Backend)
 - **Kokoro-ONNX:** A high-quality, local-first text-to-speech model.

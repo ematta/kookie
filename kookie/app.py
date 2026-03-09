@@ -655,7 +655,7 @@ def create_app(
 
 
 def run() -> None:
-    from .ui import run_kivy_ui
+    from .ui import run_pyqt_ui
 
     config = load_config()
     while True:
@@ -674,7 +674,7 @@ def run() -> None:
 
         runtime = create_app(runtime_config, ensure_download=False)
         try:
-            action = run_kivy_ui(runtime, startup_prompt=startup_prompt)
+            action = run_pyqt_ui(runtime, startup_prompt=startup_prompt)
         finally:
             shutdown = getattr(runtime, "shutdown", None)
             if callable(shutdown):

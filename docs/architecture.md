@@ -18,7 +18,7 @@
 
 ```mermaid
 flowchart LR
-    A["UI (Kivy)"] --> B["AppRuntime"]
+    A["UI (PyQt6)"] --> B["AppRuntime"]
     B --> C["PlaybackController"]
     C --> D["Speech Backend"]
     C --> E["AudioPlayer"]

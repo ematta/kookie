@@ -179,5 +179,4 @@ pyrightconfig.json
 # Local build caches
 .uv-cache/
 .pyinstaller/
-.kivy/
 .DS_Store

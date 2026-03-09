@@ -21,7 +21,7 @@ Only edit content outside the auto-generated section markers.
 - `uv run kookie-update-agents` -> `kookie.agents_updater:main`
 
 ### Dependencies
-- `kivy>=2.3.0`
+- `PyQt6>=6.6.0`
 - `kokoro-onnx>=0.4.0`
 - `numpy>=2.0.0`
 - `onnxruntime>=1.18.0`

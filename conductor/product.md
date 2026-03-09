@@ -1,5 +1,5 @@
 # Initial Concept
-Local-first macOS desktop text-to-speech app using Kivy and Kokoro.
+Local-first macOS desktop text-to-speech app using PyQT6 and Kokoro.
 
 # Product Guide
 
