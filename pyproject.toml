@@ -15,7 +15,7 @@ dependencies = [
   "pytest>=8.0.0",
   "pillow>=12.1.1",
   "pytesseract>=0.3.13",
-  "ruff>=0.15.2",
+  "ruff>=0.8.0",
   "mypy>=1.19.1",
 ]
 
