@@ -55,7 +55,7 @@ jobs:
       - name: Build dmg
         run: scripts/create_dmg.sh dist/Kookie.app
       - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: kookie-macos-release
           path: |
