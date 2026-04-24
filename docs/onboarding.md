@@ -2,19 +2,37 @@
 
 ## Prerequisites
 
-- Python 3.12
-- `uv`
-- `ffmpeg` for MP3 export tests
+- Chrome 116 or newer
+- Node.js 22 or newer
+- npm
 
-## Quick start
+## First Run
 
-1. `uv sync --extra dev`
-2. `uv run pytest -q`
-3. `python main.py`
+```bash
+npm --prefix extension install
+npm --prefix extension run vendor
+npm --prefix extension test
+```
 
-## Useful commands
+Then load the extension:
 
-- `make test`
-- `make lint`
-- `make typecheck`
-- `scripts/build_app.sh`
+1. Open `chrome://extensions`.
+2. Enable `Developer mode`.
+3. Click `Load unpacked`.
+4. Select the repo's `extension/` directory.
+
+## Useful Commands
+
+- `make install`: install extension dependencies.
+- `make vendor`: copy the ONNX Runtime browser bundle into `extension/vendor/`.
+- `make test`: run Node unit tests.
+- `make package`: create `dist/kookie-extension.zip`.
+- `make check`: run vendor copy and tests.
+
+## Manual Smoke Test
+
+1. Open any readable web page.
+2. Select a paragraph.
+3. Right-click and choose `Read with Kookie`.
+4. Confirm first-run assets download.
+5. Confirm audio starts, then use the popup to pause, resume, stop, and adjust rate/volume.

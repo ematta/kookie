@@ -1,0 +1,15 @@
+{
+  "name": "kookie-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kookie Chrome extension reader MVP",
+  "type": "module",
+  "scripts": {
+    "vendor": "node scripts/vendor-onnx.js",
+    "package": "node scripts/package-extension.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "onnxruntime-web": "1.22.0"
+  }
+}
