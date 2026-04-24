@@ -1,22 +1,15 @@
-PYTHONPATH ?= .
-UV_CACHE_DIR ?= .uv-cache
+.PHONY: install vendor test package check
 
-.PHONY: test lint typecheck coverage build format
+install:
+	npm --prefix extension install
+
+vendor:
+	npm --prefix extension run vendor
 
 test:
-	UV_CACHE_DIR=$(UV_CACHE_DIR) PYTHONPATH=$(PYTHONPATH) uv run pytest -q
+	npm --prefix extension test
 
-lint:
-	UV_CACHE_DIR=$(UV_CACHE_DIR) PYTHONPATH=$(PYTHONPATH) uv run ruff check .
+package:
+	npm --prefix extension run package
 
-typecheck:
-	UV_CACHE_DIR=$(UV_CACHE_DIR) PYTHONPATH=$(PYTHONPATH) uv run mypy kookie
-
-coverage:
-	UV_CACHE_DIR=$(UV_CACHE_DIR) PYTHONPATH=$(PYTHONPATH) uv run pytest -q --cov=kookie --cov-report=term-missing
-
-build:
-	scripts/build_app.sh
-
-format:
-	UV_CACHE_DIR=$(UV_CACHE_DIR) PYTHONPATH=$(PYTHONPATH) uv run ruff format .
+check: vendor test

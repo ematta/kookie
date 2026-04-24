@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Kookie",
+  "description": "Local-first Kokoro text-to-speech reader.",
+  "version": "0.1.0",
+  "minimum_chrome_version": "116",
+  "action": {
+    "default_title": "Kookie",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "src/serviceWorker.js",
+    "type": "module"
+  },
+  "permissions": ["activeTab", "contextMenus", "offscreen", "scripting", "storage"],
+  "host_permissions": [
+    "https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}

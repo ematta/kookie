@@ -1,24 +1,23 @@
 # Contributing to Kookie
 
-## Development workflow
+## Development Workflow
 
 1. Create a feature branch from `main`.
-2. Add unit tests before implementation changes.
+2. Add or update unit tests before implementation changes.
 3. Run local checks:
+   - `make vendor`
    - `make test`
-   - `make lint`
-   - `make typecheck`
-4. Open a pull request with a concise summary and test evidence.
+4. For UI changes, load `extension/` unpacked in Chrome and manually exercise the popup and context menu.
+5. Open a pull request with a concise summary and test evidence.
 
-## Pull request guidelines
+## Testing Policy
 
-- Keep PRs focused on one concern.
-- Document behavior changes in `README.md` or `docs/`.
-- Include screenshots for visible UI changes.
-- For packaging changes, include build/test notes.
+- Use Node's built-in test runner.
+- Keep Chrome APIs behind small seams and use hand-written fakes in unit tests.
+- Add integration/manual verification notes for behavior that requires Chrome extension runtime APIs.
 
-## Testing policy
+## Dependency Policy
 
-- Use `@pytest.mark.unit` by default.
-- Use `@pytest.mark.integration` for cross-module workflows.
-- Use `@pytest.mark.perf` for regression guard tests.
+- Keep runtime dependencies narrow.
+- `onnxruntime-web` is intentionally allowed for browser-side Kokoro inference.
+- Avoid UI frameworks unless a specific feature justifies the added weight.
