@@ -173,14 +173,14 @@ wheels = [
 
 [[package]]
 name = "hypothesis"
-version = "6.151.12"
+version = "6.152.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "sortedcontainers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ce/ab/67ca321d1ab96fd3828b12142f1c258e2d4a668a025d06cd50ab3409787f/hypothesis-6.151.12.tar.gz", hash = "sha256:be485f503979af4c3dfa19e3fc2b967d0458e7f8c4e28128d7e215e0a55102e0", size = 463900, upload-time = "2026-04-08T19:40:06.205Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/c7/3147bd903d6b18324a016d43a259cf5b4bb4545e1ead6773dc8a0374e70a/hypothesis-6.152.4.tar.gz", hash = "sha256:31c8f9ce619716f543e2710b489b1633c833586641d9e6c94cee03f109a5afc4", size = 466444, upload-time = "2026-04-27T20:18:37.594Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0e/5a/6cecf134b631050a1f8605096adbe812483b60790d951470989d39b56860/hypothesis-6.151.12-py3-none-any.whl", hash = "sha256:37d4f3a768365c30571b11dfd7a6857a12173d933010b2c4ab65619f1b5952c5", size = 529656, upload-time = "2026-04-08T19:40:03.126Z" },
+    { url = "https://files.pythonhosted.org/packages/19/89/0f50dd0d92e8a7dffc24f69ab910ff81db89b2f082ba42682bd57695e4d2/hypothesis-6.152.4-py3-none-any.whl", hash = "sha256:e730fd93c7578182efadc7f90b3c5437ee4d55edf738930eb5043c81ac1d97e8", size = 532145, upload-time = "2026-04-27T20:18:35.043Z" },
 ]
 
 [[package]]
@@ -298,7 +298,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.130.0" },
+    { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.152.4" },
     { name = "kokoro-onnx", specifier = ">=0.4.0" },
     { name = "mypy", specifier = ">=1.20.1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.20.1" },
@@ -321,7 +321,7 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "hypothesis", specifier = ">=6.151.9" }]
+dev = [{ name = "hypothesis", specifier = ">=6.152.4" }]
 
 [[package]]
 name = "language-tags"
