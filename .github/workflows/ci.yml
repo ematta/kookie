@@ -3,56 +3,24 @@ name: CI
 on:
   push:
     branches: ["main"]
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - ".gitignore"
-      - ".pre-commit-config.yaml"
-      - "assets/**"
-      - "kookie.png"
-      - "packaging/**"
-      - "scripts/**"
   pull_request:
     branches: ["main"]
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - ".gitignore"
-      - ".pre-commit-config.yaml"
-      - "assets/**"
-      - "kookie.png"
-      - "packaging/**"
-      - "scripts/**"
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, ubuntu-latest]
-        python-version: ["3.12"]
+  extension:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-node@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: extension/package-lock.json
       - name: Install dependencies
-        run: uv sync --extra dev
-      - name: Run Ruff
-        run: uv run ruff check
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-      - name: Run mypy
-        run: uv run mypy kookie
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+        run: npm --prefix extension ci
+      - name: Vendor runtime bundle
+        run: npm --prefix extension run vendor
       - name: Run tests
-        run: uv run pytest -q
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-      - name: Run coverage gate
-        run: uv run pytest -q --cov=kookie --cov-report=term-missing --cov-report=xml
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+        run: npm --prefix extension test
+      - name: Package extension
+        run: npm --prefix extension run package
