@@ -10,7 +10,7 @@ dependencies = [
   "sounddevice>=0.4.7",
   "onnxruntime>=1.18.0",
   "kokoro-onnx>=0.4.0",
-  "pyinstaller>=6.19.0",
+  "pyinstaller>=6.21.0",
   "pymupdf>=1.27.1",
   "pytest>=8.0.0",
   "pillow>=12.2.0",
@@ -26,7 +26,7 @@ dev = [
   "pytest-mock>=3.14.0",
   "hypothesis>=6.130.0",
   "mypy>=1.20.1",
-  "pyinstaller>=6.0.0",
+  "pyinstaller>=6.21.0",
   "ruff>=0.8.0",
 ]
 
